@@ -738,7 +738,9 @@ public:
             { };
     };    
     bool bfs(int* rGraph, id_t s, id_t t, vector<id_t>& parent, id_t graph_size);
+    bool bfs(set<id_t> nodes, map<pair<id_t, id_t>, int> edge_weight, id_t s, id_t t, map<id_t, id_t>& parent, EdgeMapping edges_out_nodes);
     void dfs(int* rGraph, id_t s, vector<bool>& visited, id_t graph_size);
+    void dfs(set<id_t> nodes, id_t s, set<id_t>& visited, EdgeMapping edges_out_nodes, map<pair<id_t, id_t>, int> edge_weight);
     void find_in_out_web(   deque<NodeTraversal>& sorted_nodes, 
                             InOutGrowth in_out_growth,
                             WeightedGraph weighted_graph);
@@ -750,7 +752,7 @@ public:
                                 bool reverse);
     void mark_dfs(EdgeMapping graph_matrix, id_t s, set<id_t>& sorted_nodes, 
                 vector<bool>& visited, bool reverse);
-    vector<pair<id_t,id_t>> min_cut(int* graph, id_t s, id_t t, id_t graph_size,
+    vector<pair<id_t,id_t>> min_cut(int* graph, map<pair<id_t, id_t>, int>& graph_weight, set<id_t> nodes, id_t s, id_t t, id_t graph_size,
                 EdgeMapping& edges_out_nodes, EdgeMapping& edges_in_nodes);
     void remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool reverse);
     
