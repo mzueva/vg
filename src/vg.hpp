@@ -729,31 +729,30 @@ public:
         set<id_t> backbone;
         list<id_t> ref_path;
       
-        InOutGrowth(set<id_t> nodes,
-            set<id_t> backbone,
-            list<id_t> ref_path)
+        InOutGrowth(set<id_t>& nodes,
+            set<id_t>& backbone,
+            list<id_t>& ref_path)
             : nodes(std::move(nodes)),
             backbone(std::move(backbone)),
             ref_path(std::move(ref_path))
             { };
     };    
-    bool bfs(int* rGraph, id_t s, id_t t, vector<id_t>& parent, id_t graph_size);
-    bool bfs(set<id_t> nodes, map<pair<id_t, id_t>, int> edge_weight, id_t s, id_t t, map<id_t, id_t>& parent, EdgeMapping edges_out_nodes);
-    void dfs(int* rGraph, id_t s, vector<bool>& visited, id_t graph_size);
-    void dfs(set<id_t> nodes, id_t s, set<id_t>& visited, EdgeMapping edges_out_nodes, map<pair<id_t, id_t>, int> edge_weight);
+
+    bool bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s, id_t t, map<id_t, id_t>& parent);
+    void dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight);
     void find_in_out_web(   deque<NodeTraversal>& sorted_nodes, 
-                            InOutGrowth in_out_growth,
-                            WeightedGraph weighted_graph);
-    void process_in_out_growth( EdgeMapping edges_out_nodes, id_t current_id,
-                                InOutGrowth in_out_growth,
-                                WeightedGraph weighted_graph,
-                                vector<bool>& visited,
+                            InOutGrowth& in_out_growth,
+                            WeightedGraph& weighted_graph);
+    void process_in_out_growth( EdgeMapping& edges_out_nodes, id_t current_id,
+                                InOutGrowth& in_out_growth,
+                                WeightedGraph& weighted_graph,
+                                set<id_t>& visited,
                                 deque<NodeTraversal>& sorted_nodes, 
                                 bool reverse);
-    void mark_dfs(EdgeMapping graph_matrix, id_t s, set<id_t>& sorted_nodes, 
-                vector<bool>& visited, bool reverse);
-    vector<pair<id_t,id_t>> min_cut(int* graph, map<pair<id_t, id_t>, int>& graph_weight, set<id_t> nodes, id_t s, id_t t, id_t graph_size,
-                EdgeMapping& edges_out_nodes, EdgeMapping& edges_in_nodes);
+    void mark_dfs(EdgeMapping& graph_matrix, id_t s, set<id_t>& new_nodes, 
+                set<id_t>& visited, bool reverse, set<id_t>& nodes, set<id_t>& backbone);
+    vector<pair<id_t,id_t>> min_cut(map<id_t, map<id_t, int>>& graph_weight, set<id_t>& nodes, id_t s, id_t t, 
+                EdgeMapping& edges_out_nodes, set<Edge*>& in_joins);
     void remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool reverse);
     
     // Use a topological sort to order and orient the nodes, and then flip some
