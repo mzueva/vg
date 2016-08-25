@@ -1,6 +1,7 @@
 #include "vg.hpp"
 #include "stream.hpp"
 #include "gssw_aligner.hpp"
+#include "vg.pb.h"
 #include <raptor2/raptor2.h>
 
 namespace vg {
@@ -10256,13 +10257,15 @@ void VG::max_flow(const string& ref_name) {
     max_flow_sort(sorted_nodes, ref_name);
     deque<NodeTraversal>::reverse_iterator n = sorted_nodes.rbegin();
     int i = 0;
+    cout << "result" << endl;
     for ( ; i < graph.node_size() && n != sorted_nodes.rend();
           ++i, ++n) {
         // Put the nodes in the order we got
-        cerr << (*n).node->id() << " ";
+        cout << (*n).node->id() << " ";
         swap_nodes(graph.mutable_node(i), (*n).node);
     }
-    cerr << endl;      
+//    rebuild_indexes();
+    cout << endl;      
 }
 
 void VG::max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_name) {
@@ -10271,7 +10274,7 @@ void VG::max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_nam
     //edge is determined as number of paths, going throw the edge
     WeightedGraph weighted_graph = get_weighted_graph(ref_name);
      
-    list<Mapping>& ref_path = paths.get_path(ref_name);
+    list<Mapping> ref_path = paths.get_path(ref_name);
     ref_path.reverse();
     set<id_t> backbone;
     list<id_t> reference;
@@ -10283,8 +10286,8 @@ void VG::max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_nam
     for (auto const &entry : node_by_id) {
         nodes.insert(entry.first);
     }
-    
-    find_in_out_web(sorted_nodes, InOutGrowth(nodes, backbone, reference), weighted_graph);
+    vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
+    find_in_out_web(sorted_nodes, growth, weighted_graph);
          
 }
 
@@ -10345,44 +10348,48 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
     finds in- and -out growth from the reference path and calls itself on them recursively.
 */
 void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
-                            InOutGrowth in_out_growth,
-                            WeightedGraph weighted_graph) {
+                            InOutGrowth& in_out_growth,
+                            WeightedGraph& weighted_graph) {
      
     set<id_t> backbone = in_out_growth.backbone;
     set<id_t> nodes = in_out_growth.nodes;
     list<id_t> ref_path = in_out_growth.ref_path;
     
+    cerr << "backbone";
+    for(auto const &id : ref_path) {
+        cerr << id << " ";
+    }
+    cerr << endl;
+    
+     cerr << "nodes";
+    for(auto const &id : nodes) {
+        cerr << id << " ";
+    }
+    cerr << endl;
+    
     //for efficiency if size of the backbone == size of the nodes
     //we just add all backbone to sorted nodes and quit
     if (nodes.size() == backbone.size()) {
         for (auto const &id: ref_path) {
-            NodeTraversal node = NodeTraversal(graph.mutable_node(id - 1), false);
+            NodeTraversal node = NodeTraversal(node_by_id[id], false);
             sorted_nodes.push_back(node);
         }
         return;
     }
     
-    EdgeMapping edges_out_nodes = weighted_graph.edges_out_nodes;
-    EdgeMapping edges_in_nodes = weighted_graph.edges_in_nodes;
-    map<Edge*, int> edge_weight = weighted_graph.edge_weight;
+    EdgeMapping& edges_out_nodes = weighted_graph.edges_out_nodes;
+    EdgeMapping& edges_in_nodes = weighted_graph.edges_in_nodes;
+    map<Edge*, int>& edge_weight = weighted_graph.edge_weight;
      
     //add source and sink nodes
     id_t source = graph.node_size() + 1;
     id_t sink = graph.node_size() + 2;
     id_t graph_size = sink + 1;
     
-     //for simple test implementation we represent the graph as a matrix
-    auto deleter=[&](int* ptr){delete [] ptr;};
-    unique_ptr<int[], decltype(deleter)> graph_matrix(new int[graph_size * graph_size], deleter); 
-//    memset(graph_matrix.get(), 0, graph_size * graph_size * sizeof(int));
-    for(id_t i = 0;  i < graph_size * graph_size; i++) {
-        graph_matrix[i] = 0;
-    }
- 
     set<Edge*> out_joins;
     set<Edge*> in_joins;
     
-    map<pair<id_t, id_t>, int> weighted_sub_graph;
+    map<id_t, map<id_t, int>> weighted_sub_graph;
     
     //determine max outgoing weight
     int max_weight = 0;
@@ -10401,8 +10408,7 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
                 in_joins.insert(edge);
                 continue;
             } 
-            graph_matrix[edge->from() * graph_size + edge->to()] = edge_weight[edge];
-            weighted_sub_graph[pair<id_t, id_t>(edge->from(), edge->to())] = edge_weight[edge];
+            weighted_sub_graph[edge->from()][edge->to()] = edge_weight[edge];
         }
         
         if (current_weight > max_weight) {
@@ -10411,19 +10417,17 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
     }
     //set weight for source edges
     for (auto const &edge : out_joins) {
-        graph_matrix[source * graph_size + edge->from()] = max_weight + 1;
-        weighted_sub_graph[pair<id_t, id_t>(source, edge->from())] = max_weight + 1;
+        weighted_sub_graph[source][edge->from()] = max_weight + 1;
           
     }
     //set weight for sink edges
     for (auto const &edge : in_joins) {
-        graph_matrix[edge->from() * graph_size + sink] = edge_weight[edge];
-        weighted_sub_graph[pair<id_t, id_t>(edge->from(), sink)] = edge_weight[edge];
+        weighted_sub_graph[edge->from()][sink] = edge_weight[edge];
     }
 
     //find min-cut edges
-    vector<pair<id_t,id_t>> cut = min_cut(graph_matrix.get(), weighted_sub_graph, nodes, source, 
-                                                    sink, graph_size, edges_out_nodes, edges_in_nodes);
+    vector<pair<id_t,id_t>> cut = min_cut(weighted_sub_graph, nodes, source, 
+                                                    sink, edges_out_nodes, in_joins);
     //remove min cut edges
     for(auto const &edge : cut) {
         id_t to = edge.second;
@@ -10439,9 +10443,27 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
         remove_edge(edges_in_nodes, to, edge.first, true);
     }
             
-    vector<bool> visited(nodes.size(), false);
+    set<id_t> visited;
+//    cerr << "edges out nodes" << endl;
+//    for (auto const &entry: weighted_graph.edges_out_nodes) {
+//        id_t tmp = entry.first;
+//        for (auto const &id : entry.second) {
+//            cerr << tmp << ":" << id->from() << "->" << id->to() << endl;
+//        }
+//    }
+//    cerr << endl;
+//    
+//    cerr << "edges in  nodes" << endl;
+//    for (auto const &entry: weighted_graph.edges_in_nodes) {
+//        id_t tmp = entry.first;
+//        for (auto const &id : entry.second) {
+//            cerr << tmp << ":" << id->from() << "->" << id->to() << endl;
+//        }
+//    }
+//    cerr << endl;
+    
     for (auto &current_id: ref_path) {
-        NodeTraversal node = NodeTraversal(graph.mutable_node(current_id - 1), false);     
+        NodeTraversal node = NodeTraversal(node_by_id[current_id], false);     
         //out growth
         process_in_out_growth(edges_out_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sorted_nodes, false);
@@ -10456,12 +10478,13 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
 /*
     Determines the presence of a in- out- growth, finds its backbone and calls min cut algorithm.
 */
-void VG::process_in_out_growth(EdgeMapping nodes_to_edges, id_t current_id,
-                                InOutGrowth in_out_growth,
-                                WeightedGraph weighted_graph,
-                                vector<bool>& visited, 
+void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
+                                InOutGrowth& in_out_growth,
+                                WeightedGraph& weighted_graph,
+                                set<id_t>& visited, 
                                 deque<NodeTraversal>& sorted_nodes,
                                 bool reverse) {
+
     if (!nodes_to_edges.count(current_id))
         return;    
     for (auto &edge : nodes_to_edges[current_id]) {
@@ -10472,7 +10495,7 @@ void VG::process_in_out_growth(EdgeMapping nodes_to_edges, id_t current_id,
             set<id_t> new_backbone;
             list<id_t> new_ref_path;
             while (true) {
-                if (new_backbone.count(start_node)|| visited[start_node]) {
+                if (new_backbone.count(start_node)|| visited.count(start_node)) {
                     break;
                 }
                 new_backbone.insert(start_node);
@@ -10480,22 +10503,26 @@ void VG::process_in_out_growth(EdgeMapping nodes_to_edges, id_t current_id,
                 int weight = 0;
                 Edge* next_edge;
                 //take edges with maximum weight to the new reference path
-                for (auto const &out_edge : nodes_to_edges[start_node]) {
+                for (auto const &out_edge : nodes_to_edges[start_node]) {                                    
                     if (weighted_graph.edge_weight[out_edge] > weight) {
+                        id_t tmp = reverse ? out_edge->from() : out_edge->to();
+                        if (!nodes.count(start_node) || backbone.count(start_node)) {
+                            continue;
+                        }
+                        start_node = tmp;
                         weight = weighted_graph.edge_weight[out_edge];
                         next_edge = out_edge;
-                        start_node = reverse ? next_edge->from() : next_edge->to();
+                        
                     }
                 }
 
             }  
             set<id_t> web;
-            mark_dfs(nodes_to_edges, reverse ? edge->from() : edge->to(), web, visited, reverse);
+            mark_dfs(nodes_to_edges, reverse ? edge->from() : edge->to(), web, visited, reverse, nodes, backbone);
             if (!reverse) 
                 new_ref_path.reverse();
- 
-            find_in_out_web(sorted_nodes, InOutGrowth(web, new_backbone, new_ref_path),
-                            weighted_graph);
+            InOutGrowth growth = InOutGrowth(web, new_backbone, new_ref_path);      
+            find_in_out_web(sorted_nodes, growth, weighted_graph);
         }
     }
         
@@ -10519,15 +10546,25 @@ void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool rever
 /*
     Adds the nodes in dfs discovery order to sorted_nodes
  */
-void VG::mark_dfs(EdgeMapping edges_to_nodes, id_t s,
-            set<id_t>& sorted_nodes, vector<bool>& visited, bool reverse) {
-    visited[s] = true;
-    sorted_nodes.insert(s);
-    if (edges_to_nodes.count(s)) {
-        for (auto const &edge: edges_to_nodes[s]) {
-            id_t next_node = reverse ? edge->from() : edge->to(); 
-            if (!visited[next_node]) {
-                mark_dfs(edges_to_nodes, next_node, sorted_nodes, visited, reverse);
+void VG::mark_dfs(EdgeMapping& edges_to_nodes, id_t s,
+            set<id_t>& new_nodes, set<id_t>& visited, bool reverse,
+        set<id_t>& nodes,
+        set<id_t>& backbone) {
+    visited.insert(s);
+    new_nodes.insert(s);
+    std::stack<id_t> q({ s });
+    while(!q.empty()) {
+        s = q.top();
+        q.pop();
+        if (edges_to_nodes.count(s)) {
+            for (auto const &edge: edges_to_nodes[s]) {
+                id_t next_node = reverse ? edge->from() : edge->to(); 
+                if (!visited.count(next_node) && nodes.count(next_node)
+                        && !backbone.count(next_node)) {
+                    visited.insert(next_node);
+                    new_nodes.insert(next_node);
+                    q.push(next_node);
+                }
             }
         }
     }
@@ -10536,40 +10573,8 @@ void VG::mark_dfs(EdgeMapping edges_to_nodes, id_t s,
     
 /* Returns true if there is a path from source 's' to sink 't' in
    residual graph. Also fills parent[] to store the path */
-bool VG::bfs(int* rGraph, id_t s, id_t t, vector<id_t>& parent, id_t graph_size) {
-    // Create a visited array and mark all vertices as not visited
-    vector<bool> visited(graph_size, false);
-
-    // Create a queue, enqueue source vertex and mark source vertex
-    // as visited
-    std::queue<id_t> q({ s }); 
-    visited[s] = true;
-    parent[s] = -1;
-
-    // Standard BFS Loop
-    while (!q.empty()) {
-        id_t u = q.front();
-        q.pop();
-
-        for (id_t v = 0; v < graph_size; v++) {
-            if (visited[v] == false && rGraph[u * graph_size + v] > 0) {
-                q.push(v);
-                parent[v] = u;
-                visited[v] = true;
-            }
-        }
-    }
-
-    // If we reached sink in BFS starting from source, then return
-    // true, else false
-    return (visited[t] == true);
-
-}
-
-/* Returns true if there is a path from source 's' to sink 't' in
-   residual graph. Also fills parent[] to store the path */
-bool VG::bfs(set<id_t> nodes, map<pair<id_t, id_t>, int> edge_weight, id_t s, 
-            id_t t, map<id_t, id_t>& parent, EdgeMapping edges_out_nodes) {
+bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s, 
+            id_t t, map<id_t, id_t>& parent) {
     // Create a visited array and mark all vertices as not visited
     set<id_t> visited;
 
@@ -10582,128 +10587,107 @@ bool VG::bfs(set<id_t> nodes, map<pair<id_t, id_t>, int> edge_weight, id_t s,
     // Standard BFS Loop
     while (!q.empty()) {
         id_t u = q.front();
-        q.pop();
-
-        for (auto const v : nodes) {
-            if (!visited.count(v) && edge_weight[pair<id_t, id_t>(u, v)] > 0) {
+        q.pop();    
+        for (auto const &weight : edge_weight[u]) {
+            if (weight.second <= 0) {
+                continue;
+            }
+            id_t v = weight.first;
+            if (!visited.count(v)) {
                 q.push(v);
                 parent[v] = u;
                 visited.insert(v);
+                  if (v == t) {
+                    return true;
+                }        
             }
         }
     }
-
     // If we reached sink in BFS starting from source, then return
     // true, else false
     return (visited.count(t) != 0);
 
 }
 
-// A DFS based function to find all reachable vertices from s.  The function
-// marks visited[i] as true if i is reachable from s.  The initial values in
-// visited[] must be false. We can also use BFS to find reachable vertices
 
-void VG::dfs(int* rGraph, id_t s, vector<bool>& visited, id_t graph_size) {
-    visited[s] = true;
-    for (id_t i = 0; i < graph_size; i++)
-        if (rGraph[s * graph_size + i] && !visited[i])
-            dfs(rGraph, i, visited, graph_size);
-}
-
-void VG::dfs(set<id_t> nodes, id_t s, set<id_t>& visited, EdgeMapping edges_out_nodes, map<pair<id_t, id_t>, int> edge_weight) {
+void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight) {
     
     visited.insert(s);
-    for (auto const to : nodes) {
-        if (edge_weight[pair<id_t, id_t>(s, to)] && !visited.count(to)) {
-            dfs(nodes, to, visited, edges_out_nodes, edge_weight);
-        }
-    }     
+    std::stack<id_t> q({ s });
+    while (!q.empty()) {
+        s = q.top();
+        q.pop();
+        for (auto const &weight : edge_weight[s]) {
+            id_t to = weight.first;
+            if (weight.second && !visited.count(to)) {
+                visited.insert(to);
+                q.push(to);   
+            }
+        } 
+    }
 }
 
 
 // Returns the minimum s-t cut
 
-vector<pair<id_t,id_t>> VG::min_cut(int* graph, map<pair<id_t,id_t>, int>& graph_weight,
-                set<id_t> nodes,
-                id_t s, id_t t, id_t graph_size, 
+vector<pair<id_t,id_t>> VG::min_cut(map<id_t, map<id_t, int>>& graph_weight,
+                set<id_t>& nodes,
+                id_t s, id_t t, 
                 EdgeMapping& edges_out_nodes,
-                EdgeMapping& edges_in_nodes) {
+                set<Edge*>& in_joins) {
     id_t u, v;
-
-    // Create a residual graph and fill the residual graph with
-    // given capacities in the original graph as residual capacities
-    // in residual graph
-    // rGraph[i][j] indicates residual capacity of edge i-j
-//    auto deleter=[&](int* ptr){delete [] ptr;};
-//    unique_ptr<int[], decltype(deleter)> rGraph(new int[graph_size * graph_size], deleter); 
-//    memset(rGraph.get(), 0, graph_size * graph_size * sizeof(int));
-//    
-//    for (u = 0; u < graph_size; u++)
-//        for (v = 0; v < graph_size; v++)
-//            rGraph[u * graph_size + v] = graph[u * graph_size + v];
-//    // This array is filled by BFS and to store path
-//    vector<id_t> parent(graph_size);
-//    memset(parent.data(), 0, parent.size() * sizeof(id_t));
+    nodes.insert(s);
+    nodes.insert(t);
     map<id_t, id_t> parent_map;
 
     // Augment the flow while there is path from source to sink
-    while (bfs(nodes, graph_weight, s, t, parent_map, edges_out_nodes)) {
-//    while (bfs(rGraph.get(), s, t, parent, graph_size)) {
+    while (bfs(nodes, graph_weight, s, t, parent_map)) {
         // Find minimum residual capacity of the edges along the
         // path filled by BFS. Or we can say find the maximum flow
         // through the path found.
         int path_flow = numeric_limits<int>::max();
         for (v = t; v != s; v = parent_map[v]) {
             u = parent_map[v];
-//            path_flow = min(path_flow, rGraph[u *graph_size + v]);
-            path_flow = min(path_flow, graph_weight[pair<id_t,id_t>(u,v)]);
+            path_flow = min(path_flow, graph_weight[u][v]);
         }
+//        cerr << u << endl;
 
         // update residual capacities of the edges and reverse edges
         // along the path
         for (v = t; v != s; v = parent_map[v]) {
             u = parent_map[v];
-//            rGraph[u * graph_size + v] -= path_flow;
-            graph_weight[pair<id_t,id_t>(u,v)] -= path_flow;
-//            rGraph[v * graph_size + u] += path_flow;
-            graph_weight[pair<id_t,id_t>(v,u)] += path_flow;
+            graph_weight[u][v] -= path_flow;
+            graph_weight[v][u] += path_flow;
         }
     }
 
     // Flow is maximum now, find vertices reachable from s
 
-    vector<bool> visited(graph_size, false);
     set<id_t> visited_set;
-//    dfs(rGraph.get(), s, visited, graph_size);
-    dfs(nodes, s, visited_set, edges_out_nodes, graph_weight);
+    dfs(nodes, s, visited_set, graph_weight);
     vector<pair<id_t,id_t>> min_cut;
 
-    // Print all edges that are from a reachable vertex to
-    // non-reachable vertex in the original graph
-//    for (id_t i = 0; i < graph_size; i++) {
-//        for (id_t j = 0; j < graph_size; j++) {
-//            if (visited[i] && !visited[j] && graph[i * graph_size + j]) {
-////                cout << i << " - " << j << endl;
-//                    //remove min cut edges
-//                min_cut.push_back(pair<id_t, id_t>(i, j));
-//                rGraph[i * graph_size + j] = 0;
-//            }
-//        }
-//    }
+    nodes.erase(s);
+    nodes.erase(t);
     
     for(auto const node_id : nodes) {
-        for (auto const &edge: edges_out_nodes[node_id]) {
+        for (auto const &edge : edges_out_nodes[node_id]) {
             id_t to = edge->to();
             if (!nodes.count(to)) {
                 continue;
             }
+            
+            if (in_joins.count(edge)) {
+                 to = t;
+            }     
             if (visited_set.count(node_id) && !visited_set.count(to)) {
-                cout << node_id << " - " << to << endl;
+                cerr << node_id << " - " << to << endl;
                 //remove min cut edges
                 min_cut.push_back(pair<id_t, id_t>(node_id, to));
             }
         }
     }
+
     return min_cut;
 }
 
