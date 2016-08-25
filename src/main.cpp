@@ -8984,7 +8984,7 @@ int main_sort(int argc, char *argv[]) {
     }
         
     graph->max_flow(reference_name);    
-    graph->serialize_to_ostream(std::cout);
+//    graph->serialize_to_ostream(std::cout);
     delete graph;  
     return 0;
 }
