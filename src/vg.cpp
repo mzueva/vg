@@ -10254,6 +10254,7 @@ void VG::max_flow(const string& ref_name) {
     if (size() <= 1) return;
     // Topologically sort, which orders and orients all the nodes.
     deque<NodeTraversal> sorted_nodes;
+    paths.sort_by_mapping_rank();
     max_flow_sort(sorted_nodes, ref_name);
     deque<NodeTraversal>::reverse_iterator n = sorted_nodes.rbegin();
     int i = 0;
@@ -10273,26 +10274,19 @@ void VG::max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_nam
     //assign weight to edges
     //edge is determined as number of paths, going throw the edge
     WeightedGraph weighted_graph = get_weighted_graph(ref_name);
-     
-//    list<Mapping> ref_path = paths.get_path(ref_name);
-//    ref_path.reverse();
+    
+    
+    list<Mapping> ref_path(paths.get_path(ref_name).begin(), paths.get_path(ref_name).end());
+    ref_path.reverse();
     set<id_t> backbone;
     list<id_t> reference;
-    list<id_t> ref_path;
-    ref_path.push_back(10);
-    ref_path.push_back(8);
-    ref_path.push_back(13);
-    ref_path.push_back(17);
-    ref_path.push_back(4);
-    ref_path.push_back(18);
-    ref_path.push_back(20);
-    
-//    for(auto const &mapping : ref_path) {
-    for(auto const &id : ref_path) {
-//        backbone.insert(mapping.position().node_id());
-//        reference.push_back(mapping.position().node_id());
-        backbone.insert(id);
-        reference.push_back(id);
+   
+    for(auto const &mapping : ref_path) {
+//    for(auto const &id : ref_path) {
+        backbone.insert(mapping.position().node_id());
+        reference.push_back(mapping.position().node_id());
+//        backbone.insert(id);
+//        reference.push_back(id);
     }
     set<id_t> nodes;
     for (auto const &entry : node_by_id) {
