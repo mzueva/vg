@@ -10274,18 +10274,31 @@ void VG::max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_nam
     //edge is determined as number of paths, going throw the edge
     WeightedGraph weighted_graph = get_weighted_graph(ref_name);
      
-    list<Mapping> ref_path = paths.get_path(ref_name);
-    ref_path.reverse();
+//    list<Mapping> ref_path = paths.get_path(ref_name);
+//    ref_path.reverse();
     set<id_t> backbone;
     list<id_t> reference;
-    for(auto const &mapping : ref_path) {
-        backbone.insert(mapping.position().node_id());
-        reference.push_back(mapping.position().node_id());
+    list<id_t> ref_path;
+    ref_path.push_back(10);
+    ref_path.push_back(8);
+    ref_path.push_back(13);
+    ref_path.push_back(17);
+    ref_path.push_back(4);
+    ref_path.push_back(18);
+    ref_path.push_back(20);
+    
+//    for(auto const &mapping : ref_path) {
+    for(auto const &id : ref_path) {
+//        backbone.insert(mapping.position().node_id());
+//        reference.push_back(mapping.position().node_id());
+        backbone.insert(id);
+        reference.push_back(id);
     }
     set<id_t> nodes;
     for (auto const &entry : node_by_id) {
         nodes.insert(entry.first);
     }
+    
     vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph);
          
@@ -10355,13 +10368,13 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
     set<id_t> nodes = in_out_growth.nodes;
     list<id_t> ref_path = in_out_growth.ref_path;
     
-    cerr << "backbone";
+    cerr << "backbone: ";
     for(auto const &id : ref_path) {
         cerr << id << " ";
     }
     cerr << endl;
     
-     cerr << "nodes";
+     cerr << "nodes: ";
     for(auto const &id : nodes) {
         cerr << id << " ";
     }
@@ -10461,9 +10474,9 @@ void VG::find_in_out_web(deque<NodeTraversal>& sorted_nodes,
 //        }
 //    }
 //    cerr << endl;
-    
+    visited.insert(backbone.begin(), backbone.end());
     for (auto &current_id: ref_path) {
-        NodeTraversal node = NodeTraversal(node_by_id[current_id], false);     
+        NodeTraversal node = NodeTraversal(node_by_id[current_id], false);
         //out growth
         process_in_out_growth(edges_out_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sorted_nodes, false);
@@ -10487,11 +10500,13 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
 
     if (!nodes_to_edges.count(current_id))
         return;    
+    set<id_t> backbone = in_out_growth.backbone;
+    set<id_t> nodes = in_out_growth.nodes;
     for (auto &edge : nodes_to_edges[current_id]) {
         id_t start_node = reverse ? edge->from() : edge->to();
-        set<id_t> backbone = in_out_growth.backbone;
-        set<id_t> nodes = in_out_growth.nodes;
-        if (nodes.count(start_node) && !backbone.count(start_node)) {    
+        
+        if (nodes.count(start_node) && !backbone.count(start_node) && 
+                !visited.count(start_node)){    
             set<id_t> new_backbone;
             list<id_t> new_ref_path;
             while (true) {
@@ -10506,7 +10521,8 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
                 for (auto const &out_edge : nodes_to_edges[start_node]) {                                    
                     if (weighted_graph.edge_weight[out_edge] > weight) {
                         id_t tmp = reverse ? out_edge->from() : out_edge->to();
-                        if (!nodes.count(start_node) || backbone.count(start_node)) {
+                        if (!nodes.count(tmp) || backbone.count(tmp) || 
+                                new_backbone.count(tmp)|| visited.count(tmp)) {
                             continue;
                         }
                         start_node = tmp;
@@ -10534,8 +10550,10 @@ void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool rever
         auto it = begin(edges);
         while (it != end(edges)) {
             id_t next = reverse ? (*it)->from() : (*it)->to();
+       
             if (next == to) {
                 edges.erase(it);
+                cerr << "removing edge " << reverse << " " << node << " " << to << endl; 
             } else {
                 ++it;
             }
