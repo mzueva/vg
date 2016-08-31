@@ -708,7 +708,7 @@ public:
 
     //sorts graph using max-flow algorithm	
     void max_flow(const string& ref_name);
-    void max_flow_sort(deque<NodeTraversal>& sorted_nodes, const string& ref_name);
+    void max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name);
     //Structure for holding weighted edges of the graph
     struct WeightedGraph {
         EdgeMapping edges_out_nodes;
@@ -740,15 +740,17 @@ public:
 
     bool bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s, id_t t, map<id_t, id_t>& parent);
     void dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight);
-    void find_in_out_web(   deque<NodeTraversal>& sorted_nodes, 
+    void find_in_out_web(   list<NodeTraversal>& sorted_nodes, 
                             InOutGrowth& in_out_growth,
-                            WeightedGraph& weighted_graph);
+                            WeightedGraph& weighted_graph,
+                            set<id_t>& unsorted_nodes);
     void process_in_out_growth( EdgeMapping& edges_out_nodes, id_t current_id,
                                 InOutGrowth& in_out_growth,
                                 WeightedGraph& weighted_graph,
                                 set<id_t>& visited,
-                                deque<NodeTraversal>& sorted_nodes, 
-                                bool reverse);
+                                list<NodeTraversal>& sorted_nodes, 
+                                bool reverse, 
+                                set<id_t>& unsorted_nodes);
     void mark_dfs(EdgeMapping& graph_matrix, id_t s, set<id_t>& new_nodes, 
                 set<id_t>& visited, bool reverse, set<id_t>& nodes, set<id_t>& backbone);
     vector<pair<id_t,id_t>> min_cut(map<id_t, map<id_t, int>>& graph_weight, set<id_t>& nodes, id_t s, id_t t, 
