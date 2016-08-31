@@ -8913,11 +8913,11 @@ int main_test(int argc, char** argv){
 }
 
 void help_sort(char** argv){
-    cerr << "usage: " << argv[0] << " sort [options] -i input_file -r reference_name > sorted.vg " << endl
+    cerr << "usage: " << argv[0] << " sort [options] -i <input_file> -r <reference_name> > sorted.vg " << endl
          << "options: " << endl
          << "           -g, --gfa           input in GFA format" << endl
          << "           -i, --in            input file" << endl
-         << "           -r, --ref            reference name" << endl
+         << "           -r, --ref           reference name" << endl
          << endl;
 }
 
