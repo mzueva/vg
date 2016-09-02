@@ -10297,26 +10297,67 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     }
     
     set<id_t> unsorted_nodes(nodes.begin(), nodes.end());
-//    cerr << unsorted_nodes.size() << endl;
+
     vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
     
-//    cerr << "unsorted: ";
-//     for(auto const &id : unsorted_nodes) {
-//        cerr << id << " "; 
-//    }
-//    cerr << endl;
-    
-    map<id_t, vector<id_t>> mapping_after;
-    map<id_t, vector<id_t>> mapping_before;
+    map<id_t, deque<id_t>> mapping_after;
+    map<id_t, deque<id_t>> mapping_before;
+    set<id_t> left;
 
+    left.insert(unsorted_nodes.begin(), unsorted_nodes.end());
+    int erased = 0;
+//    cerr << "left: " << left.size() << endl;
     for(auto const &id : unsorted_nodes) {
-       
+        if (!left.count(id)) {
+            continue;
+        }
+        if (id == 3346) {
+            cerr << id << endl;
+        }
         bool mapped = false;
         for (auto const &edge : edges_out_nodes[id]) {
             if (!unsorted_nodes.count(edge->to())) {
-//                cerr << "connecting after " << id << " to " << edge->to() << endl;
+//                cerr << "inserting before " << edge->to() << ": " << id;
                 mapping_after[edge->to()].push_back(id);
+                left.erase(id);
+                erased++;
+                id_t from = id;
+                std::queue<id_t> q({ id });
+ 
+                while (!q.empty() && !left.empty()) {
+                    id_t u = q.front();
+                    q.pop();    
+                    for (auto const &inner_edge : edges_in_nodes[u]) {
+                        if (!left.count(inner_edge->from())) {
+                            continue;
+                        }    
+                        id_t v = inner_edge->from();
+                        q.push(v);
+                        left.erase(v);
+                        erased++;
+                        mapping_after[edge->to()].push_back(v);
+//                        cerr << " " << v;                   
+                    }
+                }
+                
+                std::queue<id_t> s({ id });
+                while (!s.empty() && !left.empty()) {
+                    id_t u = s.front();
+                    s.pop();    
+                    for (auto const &inner_edge : edges_out_nodes[u]) {
+                        if (!left.count(inner_edge->from())) {
+                            continue;
+                        }    
+                        id_t v = inner_edge->from();
+                        s.push(v);
+                        left.erase(v);
+                        erased++;
+                        mapping_after[edge->to()].push_front(v);
+//                        cerr << " " << v;                   
+                    }
+                }
+//                cerr << endl;
                 mapped = true;
                 break;
             }
@@ -10326,33 +10367,67 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
         } 
         for (auto const &edge : edges_in_nodes[id]) {
             if (!unsorted_nodes.count(edge->from())) {
-//                cerr << "connecting before " << edge->from() << " to " << id << endl;
+//                cerr << "inserting after " << edge->from() << " to " << id << endl;
                 mapping_before[edge->from()].push_back(id);
+                left.erase(id);
+                 erased++;
+                id_t from = id;
+                std::queue<id_t> q({ id });
+ 
+                while (!q.empty() && !left.empty()) {
+                    id_t u = q.front();
+                    q.pop();    
+                    for (auto const &inner_edge : edges_out_nodes[u]) {
+                        if (!left.count(inner_edge->to())) {
+                            continue;
+                        }    
+                        id_t v = inner_edge->to();
+                        q.push(v);
+                        left.erase(v);
+                         erased++;
+                        mapping_before[edge->from()].push_front(v);
+//                        cerr << " " << v;                   
+                    }
+                }
+//                cerr << endl;
                 mapped = true;
                 break;
             }
         }
     }  
     
-//    cerr << "sorted: " << sorted_nodes.size() << endl;  
 
     auto it = begin(sorted_nodes);
+    int count = 0;
     while(it != end(sorted_nodes)) {
+       
         id_t id = it->node->id();
+        
         for (auto const &inserted : mapping_before[id]) {
             NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
             sorted_nodes.insert(it, node);
+            count++;
         } 
+        ++it;
         for(auto const &inserted : mapping_after[id]) {
-            ++it;
             NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
             sorted_nodes.insert(it, node);
-        }   
-        ++it;
+            count++;
+        }         
     }
+    
+    cerr << endl;
+    
     if (sorted_nodes.size() != graph.node_size()) {
+        cerr << "erased: " << erased << endl;
+        cerr << "inserted: " << count << endl;
         cerr << "sorted: " << sorted_nodes.size() << " in graph: " << 
                 graph.node_size() <<endl;  
+        cerr << "left after: " << left.size() << endl;
+        for(auto const &id : left) {
+            cerr << id << " ";
+        }
+        cerr << endl;
     }
 }
 
