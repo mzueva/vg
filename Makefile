@@ -10,7 +10,7 @@ CPP_DIR:=cpp
 
 EXE:=vg
 
-CXX:=g++
+CXX:=g++-4.9
 CXXFLAGS:=-O3 -msse4.1 -fopenmp -std=c++11 -ggdb
 
 CWD:=$(shell pwd)
