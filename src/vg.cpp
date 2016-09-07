@@ -10562,7 +10562,11 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         //if this is a reference edge, increase the weight
         if (from_node_mapping.count(ref_name) &&
                 to_node_mapping.count(ref_name)) {
-            weight += ref_weight;
+            //for (auto const &mapping : to_node_mapping[ref_name]) {
+            if((*to_node_mapping[ref_name].begin())->rank() == (*from_node_mapping[ref_name].begin())->rank() + 1){
+            //if(mapping->rank() == nodeTo->rank() - 1)
+                weight += ref_weight;
+            }
         }
 
         for (auto const &path_mapping : from_node_mapping) {
