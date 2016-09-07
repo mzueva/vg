@@ -303,6 +303,31 @@ size_t fastq_paired_two_files_for_each(string& file1, string& file2, function<vo
 
 }
 
+void gam_paired_interleaved_for_each_parallel(ifstream& in, function<void(Alignment&, Alignment&)> lambda) {
+    vector<Alignment> aln_buf;
+    std::function<void(Alignment&)> handler = [&](Alignment& aln) {
+        bool got_pair = false;
+        Alignment aln1;
+        Alignment aln2;
+#pragma omp critical(input)
+        {
+            if (aln_buf.size() == 1) {
+                aln1 = aln_buf.front();
+                aln2 = aln;
+                aln_buf.clear();
+                got_pair = true;
+            } else if (aln_buf.size() == 0) {
+                aln_buf.push_back(aln);
+            }
+        }
+        // now align
+        if (got_pair) {
+            lambda(aln1, aln2);
+        }
+    };
+    stream::for_each_parallel(in, handler);
+}
+
 void parse_rg_sample_map(char* hts_header, map<string, string>& rg_sample) {
     string header(hts_header);
     vector<string> header_lines = split_delims(header, "\n");
@@ -640,6 +665,13 @@ Alignment trim_alignment(const Alignment& aln, const Position& pos1, const Posit
     return trimmed;
 }
 
+vector<Alignment> alignment_ends(const Alignment& aln, size_t len1, size_t len2) {
+    vector<Alignment> ends;
+    ends.push_back(strip_from_end(aln, aln.sequence().size()-len1));
+    ends.push_back(strip_from_start(aln, aln.sequence().size()-len2));
+    return ends;
+}
+
 vector<Alignment> reverse_complement_alignments(const vector<Alignment>& alns, const function<int64_t(int64_t)>& node_length) {
     vector<Alignment> revalns;
     for (auto& aln : alns) {
@@ -661,9 +693,9 @@ Alignment reverse_complement_alignment(const Alignment& aln,
     
     if(aln.has_path()) {
         // Now invert the order of the mappings, and for each mapping, flip the
-        // is_reverse flag. The edits within mappings also get put in reverse
-        // order, get their positions corrected, and get their sequences get
-        // reverse complemented.
+        // is_reverse flag, and adjust offsets to count from the other end. The
+        // edits within mappings also get put in reverse order, and get their
+        // sequences reverse complemented.
         *reversed.mutable_path() = reverse_complement_path(aln.path(), node_length);
     }
     
@@ -707,10 +739,10 @@ Alignment merge_alignments(const vector<Alignment>& alns, bool debug) {
 
 
 Alignment& extend_alignment(Alignment& a1, const Alignment& a2, bool debug) {
-    if (debug) cerr << "extending alignment " << endl << pb2json(a1) << endl << pb2json(a2) << endl;
+    //if (debug) cerr << "extending alignment " << endl << pb2json(a1) << endl << pb2json(a2) << endl;
     a1.set_sequence(a1.sequence() + a2.sequence());
     extend_path(*a1.mutable_path(), a2.path());
-    if (debug) cerr << "extended alignments, result is " << endl << pb2json(a1) << endl;
+    //if (debug) cerr << "extended alignments, result is " << endl << pb2json(a1) << endl;
     return a1;
 }
 
