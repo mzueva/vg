@@ -10319,6 +10319,95 @@ void VG::max_flow(const string& ref_name) {
     cout << endl;      
 }
 
+void VG::fast_linear_sort(const string& ref_name){
+    if (size() <= 1) return;
+    // Topologically sort, which orders and orients all the nodes.
+    list<NodeTraversal> sorted_nodes;
+    paths.sort_by_mapping_rank();
+
+    //get weighted graph
+    WeightedGraph weighted_graph = get_weighted_graph(ref_name);
+
+    //all nodes size
+    id_t nodes_size =node_by_id.size();
+
+    //create set of sinks and sources
+    std::set<id_t> sources;
+    //index - degree of nodes
+    std::vector<std::set<id_t>> nodes_degree;
+    int cur_node_degree;
+    //find sources
+    for (auto const &entry : node_by_id)
+    {
+        if(weighted_graph.edges_in_nodes.find(entry.first) == weighted_graph.edges_in_nodes.end() )
+        {
+            sources.insert(entry.first);
+            continue;
+        }
+        cur_node_degree = get_node_degree(weighted_graph, entry.first);
+        if (cur_node_degree < 0)
+            continue;
+
+        if (cur_node_degree + 1 > nodes_degree.size())
+            nodes_degree.resize(cur_node_degree + 1);
+        nodes_degree[cur_node_degree].insert(entry.first);
+        //if(edges_out_nodes.find(entry.first) != edges_out_nodes.end() )
+        //   sinks.insert(entry.first);
+    }
+
+    id_t next = -1;
+    //std::vector<id_t> sorted;
+
+
+    int remaining_nodes_size = nodes_size;
+    set<id_t>::iterator i_last_el;
+
+    while (remaining_nodes_size > 0)
+    {   //Get next vertex to delete
+        if (next == -1)
+        {
+            if (sources.size() > 0) //|| sinks.size() > 0)
+            {
+                i_last_el = sources.end();
+                --i_last_el;
+                next = *i_last_el;
+                sources.erase(i_last_el);
+            }
+            else
+                next = find_max_node(nodes_degree);
+        }
+        else
+        {
+            i_last_el = sources.find(next);
+            if(i_last_el != sources.end())
+                sources.erase(i_last_el);
+        }
+
+        //add next node
+        //sorted.push_back(next);
+        NodeTraversal node = NodeTraversal(node_by_id[next], false);
+        sorted_nodes.push_back(node);
+
+        //remove edges related with node
+        next = get_next_node_recalc_degrees(weighted_graph, nodes_degree,sources,
+                                            next);
+        remaining_nodes_size--;
+    }
+
+    //output
+    list<NodeTraversal>::iterator n = sorted_nodes.begin();
+    int i = 0;
+//    cout << "result" << endl;
+    for ( ; i < graph.node_size() && n != sorted_nodes.end();
+          ++i, ++n) {
+        // Put the nodes in the order we got
+        cout << (*n).node->id() << " ";
+        swap_nodes(graph.mutable_node(i), (*n).node);
+    }
+//    rebuild_indexes();
+    cout << endl;
+}
+
 void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name) {
 
     //assign weight to edges
@@ -10347,7 +10436,6 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     }
     
     set<id_t> unsorted_nodes(nodes.begin(), nodes.end());
-
     vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
     
@@ -10508,6 +10596,22 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     }
 }
 
+/* return degree of the node in the WeightedGraph*/
+int VG::get_node_degree(VG::WeightedGraph& wg, id_t node_id)
+{
+
+    std::vector<Edge*> in_edges = wg.edges_in_nodes[node_id];
+    int degree = 0;
+    for(auto const &edge : in_edges)
+        degree -= wg.edge_weight[edge];
+
+    std::vector<Edge*> out_edges = wg.edges_out_nodes[node_id];
+    for(auto const &edge : out_edges)
+        degree += wg.edge_weight[edge];
+
+    return degree;
+}
+
 /* Weight is assigned to edges as number of paths, that go through hat edge. 
    Path goes through the edge, if both adjacent nodes of the edge are mapped to that path.*/
 VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
@@ -10538,7 +10642,11 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         //if this is a reference edge, increase the weight
         if (from_node_mapping.count(ref_name) &&
                 to_node_mapping.count(ref_name)) {
-            weight += ref_weight;
+            //for (auto const &mapping : to_node_mapping[ref_name]) {
+            if((*to_node_mapping[ref_name].begin())->rank() == (*from_node_mapping[ref_name].begin())->rank() + 1){
+            //if(mapping->rank() == nodeTo->rank() - 1)
+                weight += ref_weight;
+            }
         }
 
         for (auto const &path_mapping : from_node_mapping) {
@@ -10562,6 +10670,97 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
     }
     
     return WeightedGraph(edges_out_nodes, edges_in_nodes, edge_weight);
+}
+
+/* Iterate all edges adjacent to node, recalc degrees of related nodes.
+ * If node has no incoming edges we add it to the sources and return as next node.
+ * */
+id_t VG::get_next_node_recalc_degrees(WeightedGraph& wg, std::vector<std::set<id_t>>& degrees,std::set<id_t> &sources,
+                                     id_t node)
+{
+    id_t result = -1;
+    //recalc degrees
+    id_t cur_node;
+    int new_degree;
+    int cur_degree;
+    //remove from degrees (if node is not source)
+    int node_degree = get_node_degree(wg, node);
+    if(node_degree >= 0 && (node_degree < degrees.size()))
+    {
+        set<id_t>::iterator i_el = degrees[node_degree].find(node);
+        if(i_el != degrees[node_degree].end())
+            degrees[node_degree].erase(i_el);
+    }
+
+
+    //decrease number of in_edges from current node
+    for(const auto& edge: wg.edges_in_nodes[node])
+    {
+        cur_node = edge->from();
+        cur_degree = get_node_degree(wg, cur_node);
+        new_degree = cur_degree - wg.edge_weight[edge];
+
+        //decrease out_edges from current node
+        if(cur_degree >= 0)
+            degrees[cur_degree].erase(cur_node);
+        //add node to new_degree set
+        if(new_degree >= 0)
+        {
+            if (new_degree + 1> degrees.size())
+                degrees.resize(new_degree + 1);
+            degrees[new_degree].insert(cur_node);
+        }
+
+
+        //remove current edge from wg
+        std::vector<Edge*>& related_edges = wg.edges_out_nodes[cur_node];
+        related_edges.erase(std::remove(related_edges.begin(), related_edges.end(), edge), related_edges.end());
+    }
+    for(const auto& edge: wg.edges_out_nodes[node])
+    {
+        cur_node = edge->to();
+        //check if node is new source
+        std::vector<Edge*>& related_edges = wg.edges_in_nodes[cur_node];
+        //add related node to sources
+        if(related_edges.size() == 1)
+        {
+            sources.insert(cur_node);
+            result = cur_node;
+        }
+
+        cur_degree = get_node_degree(wg, cur_node);
+        new_degree = cur_degree + wg.edge_weight[edge];
+
+        //decrease in_edges from current node
+        if(cur_degree >= 0)
+            degrees[cur_degree].erase(cur_node);
+        //add node to new_degree set (if not source)
+        if(new_degree >= 0 && related_edges.size() != 1)
+        {
+            if (new_degree + 1> degrees.size())
+                degrees.resize(new_degree + 1);
+            degrees[new_degree].insert(cur_node);
+        }
+        //remove current edge from wg
+        related_edges.erase(std::remove(related_edges.begin(), related_edges.end(), edge), related_edges.end());
+    }
+
+    return result;
+}
+
+/*Find node with max degree*/
+id_t VG::find_max_node(std::vector<std::set<id_t>> nodes_degree)
+{
+    int start_size = nodes_degree.size()-1;
+    int last_ind = start_size;
+    while(nodes_degree[last_ind].size() == 0)
+    {
+        last_ind--;
+    }
+    if(last_ind != start_size)
+        nodes_degree.resize(last_ind + 1);
+    set<id_t>::iterator i_last_el = nodes_degree[last_ind].end();
+    return *(--i_last_el);
 }
 
 /*  Method finds min cut in a given set of nodes, then removes min cut edges,

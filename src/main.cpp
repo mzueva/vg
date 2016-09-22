@@ -8812,6 +8812,15 @@ void help_sort(char** argv){
          << endl;
 }
 
+void help_fsort(char** argv){
+    cerr << "usage: " << argv[0] << " fsort [options] -i <input_file> -r <reference_name> > sorted.vg " << endl
+         << "options: " << endl
+         << "           -g, --gfa           input in GFA format" << endl
+         << "           -i, --in            input file" << endl
+         << "           -r, --ref           reference name" << endl
+         << endl;
+}
+
 int main_sort(int argc, char *argv[]) {
 
     //default input format is vg
@@ -8880,6 +8889,76 @@ int main_sort(int argc, char *argv[]) {
     return 0;
 }
 
+
+int main_fast_sort(int argc, char *argv[]) {
+
+    //default input format is vg
+    bool gfa_input = false;
+    string file_name = "";
+    string reference_name = "";
+
+    int c;
+    while (true) {
+        static struct option long_options[] =
+            {
+                {"gfa", no_argument, 0, 'g'},
+                {"in", required_argument, 0, 'i'},
+                {"ref", required_argument, 0, 'r'},
+                {0, 0, 0, 0}
+            };
+
+        int option_index = 0;
+        c = getopt_long (argc, argv, "i:r:g",
+                         long_options, &option_index);
+
+        /* Detect the end of the options. */
+        if (c == -1)
+            break;
+
+        switch (c)
+        {
+        case 'g':
+            gfa_input = true;
+            break;
+        case 'r':
+            reference_name = optarg;
+            break;
+        case 'i':
+            file_name = optarg;
+            break;
+        case 'h':
+        case '?':
+            /* getopt_long already printed an error message. */
+            help_fsort(argv);
+            exit(1);
+            break;
+        default:
+            abort ();
+        }
+    }
+
+    if (reference_name.empty() || file_name.empty()) {
+        help_fsort(argv);
+        exit(1);
+    }
+
+    ifstream in;
+    in.open(file_name.c_str());
+    VG* graph = nullptr;
+    if (gfa_input) {
+        graph = new VG;
+        graph->from_gfa(in);
+    } else {
+        graph = new VG(in);
+    }
+
+    graph->fast_linear_sort(reference_name);
+//    graph->serialize_to_ostream(std::cout);
+    delete graph;
+    return 0;
+}
+
+
 void vg_help(char** argv) {
     cerr << "vg: variation graph tool, version " << VG_VERSION_STRING << endl
          << endl
@@ -8914,7 +8993,8 @@ void vg_help(char** argv) {
          << "  -- validate      validate the semantics of a graph" << endl
          << "  -- test          run unit tests" << endl
          << "  -- version       version information" << endl
-  	 << "  -- sort          sort variant graph using max flow algorithm" << endl;
+     << "  -- sort          sort variant graph using max flow algorithm" << endl
+    << "  -- fsort          sort variant graph using Eades fast heuristic algorithm" << endl;
 }
 
 int main(int argc, char *argv[])
@@ -8988,6 +9068,8 @@ int main(int argc, char *argv[])
         return main_test(argc, argv);
     } else if (command == "sort") {
         return main_sort(argc, argv);
+    }else if (command == "fsort") {
+        return main_fast_sort(argc, argv);
     }else {
         cerr << "error:[vg] command " << command << " not found" << endl;
         vg_help(argv);

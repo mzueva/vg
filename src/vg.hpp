@@ -714,6 +714,7 @@ public:
 
     //sorts graph using max-flow algorithm	
     void max_flow(const string& ref_name);
+    void fast_linear_sort(const string& ref_name);
     void max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name);
     //Structure for holding weighted edges of the graph
     struct WeightedGraph {
@@ -729,6 +730,8 @@ public:
             edge_weight(std::move(edge_weight))
             { };
     };
+    int get_node_degree(WeightedGraph &wg, id_t node_id);
+
     WeightedGraph get_weighted_graph(const string& ref_name);
     struct InOutGrowth {
         set<id_t> nodes;
@@ -743,6 +746,12 @@ public:
             ref_path(std::move(ref_path))
             { };
     };    
+    /* Iterate all edges adjacent to node, recalc degrees of related nodes.
+     * If node has no incoming edges we add it to the sources and return as next node.
+     * */
+    id_t get_next_node_recalc_degrees(WeightedGraph& wg, std::vector<std::set<id_t>>& degrees,std::set<id_t> &sources,
+                                         id_t node);
+    id_t find_max_node(std::vector<std::set<id_t>> nodes_degree);
 
     bool bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s, id_t t, map<id_t, id_t>& parent);
     void dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight);
