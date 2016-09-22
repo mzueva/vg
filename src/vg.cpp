@@ -184,7 +184,7 @@ SB_Input VG::vg_to_sb_input(){
 
     id_t VG::get_node_at_nucleotide(string pathname, int nuc){
         Path p = paths.path(pathname);
-        
+
         int nt_start = 0;
         int nt_end = 0;
         for (int i = 0; i < p.mapping_size(); i++){
@@ -203,7 +203,7 @@ SB_Input VG::vg_to_sb_input(){
         }
 
     }
- 
+
  map<id_t, vcflib::Variant> VG::get_node_id_to_variant(vcflib::VariantCallFile vfile){
     map<id_t, vcflib::Variant> ret;
     vcflib::Variant var;
@@ -2914,7 +2914,7 @@ void VG::from_gfa(istream& in, bool showp) {
     map<string, sequence_elem>::iterator it;
     id_t curr_id = 1;
     map<string, id_t> id_names;
-    std::function<id_t(const string&)> get_add_id = [&](const string& name) -> id_t { 
+    std::function<id_t(const string&)> get_add_id = [&](const string& name) -> id_t {
         if (is_number(name)) {
             return std::stol(name);
         } else {
@@ -2989,7 +2989,7 @@ void VG::bluntify(void) {
                 //cerr << "claimed overlap " << edge->overlap() << endl;
                 // derive and check the overlap seqs
                 auto from_seq = trav_sequence(NodeTraversal(get_node(edge->from()), edge->from_start()));
-                //string from_overlap = 
+                //string from_overlap =
                 //from_overlap = from_overlap.substr(from_overlap.size() - edge->overlap());
                 auto to_seq = trav_sequence(NodeTraversal(get_node(edge->to()), edge->to_end()));
 
@@ -3030,7 +3030,7 @@ void VG::bluntify(void) {
                         edge->set_overlap(0);
                         // we should axe the edge so as to not generate spurious sequences in the graph
                     }
-                    
+
                 } else {
                     //cerr << "overlap as expected" << endl;
                     //overlap_node[edge] = create_node(to_seq);
@@ -3213,10 +3213,10 @@ void VG::bluntify(void) {
             edges_to_create.insert(make_pair(prev_trav, node_trav));
         }
 
-        // if we matched 
+        // if we matched
         // walk forward until we reach a bifurcation
         // or we are no longer matching sequence
-        
+
         // we reattach the overlap node to that point
         // later, normalization will remove the superfluous parts
     }
@@ -3278,7 +3278,7 @@ void VG::bluntify(void) {
     for (auto& id : nodes_to_destroy) {
         destroy_node(id);
     }
-    
+
 }
 
 static
@@ -3496,7 +3496,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
     // our chunk size isn't going to reach into the range where we'll have issues (>several megs)
     // so we'll run this for regions of moderate size, scaling up in the case that we run into a big deletion
     //
-    
+
     for (vector<string>::iterator t = targets.begin(); t != targets.end(); ++t) {
 
         //string& seq_name = *t;
@@ -3595,7 +3595,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
                 var.position -= 1; // convert to 0-based
                 if (allowed_variants == nullptr
                     || allowed_variants->count(vrepr)) {
-                    records.push_back(var);                    
+                    records.push_back(var);
                 }
             }
             if (++i % 1000 == 0) update_progress(var.position-start_pos);
@@ -3943,7 +3943,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
         }
         return true;
     };
-    
+
     for_each_node([&](Node* node) {
             if (!all_upper(node->sequence())){
                 cerr << "WARNING: Lower case letters found during construction" << endl;
@@ -6642,7 +6642,7 @@ void VG::to_dot(ostream& out,
             out << "    " << n->id() << " [label=\"" << nlabel.str() << "\",penwidth=2,shape=circle,";
         } else if (superbubble_labeling || cactusbubble_labeling) {
             //out << "    " << n->id() << " [label=" << nlabel.str() << ",shape=box,penwidth=2,";
-            out << "    " << n->id() << " [label=" << nlabel.str() << ",shape=none,width=0,height=0,margin=0,";      
+            out << "    " << n->id() << " [label=" << nlabel.str() << ",shape=none,width=0,height=0,margin=0,";
         } else {
             out << "    " << n->id() << " [label=" << nlabel.str() << ",shape=none,width=0,height=0,margin=0,";
         }
@@ -6830,13 +6830,13 @@ void VG::to_dot(ostream& out,
         alnid++;
         for (int i = 0; i < aln.path().mapping_size(); ++i) {
             const Mapping& m = aln.path().mapping(i);
-            
+
             if(!has_node(m.position().node_id()) && skip_missing_nodes) {
                 // We don't have the node this is aligned to. We probably are
                 // looking at a subset graph, and the user asked us to skip it.
                 continue;
             }
-            
+
             //void mapping_cigar(const Mapping& mapping, vector<pair<int, char> >& cigar);
             //string cigar_string(vector<pair<int, char> >& cigar);
             //mapid << alnid << ":" << m.position().node_id() << ":" << cigar_string(cigar);
@@ -6970,7 +6970,7 @@ void VG::to_dot(ostream& out,
                         out << "    " << pathid-1 << " -> " << path_starts[path.name()]
                             << " [dir=none,color=\"" << color << "\",constraint=false];" << endl;
                     }
-                    
+
                 }
             }
             if (walk_paths) {
@@ -7459,7 +7459,7 @@ Alignment VG::align(const Alignment& alignment,
                     QualAdjAligner* qual_adj_aligner,
                     size_t max_query_graph_ratio,
                     bool print_score_matrices) {
-    
+
     auto aln = alignment;
 
     /*
@@ -7487,7 +7487,7 @@ Alignment VG::align(const Alignment& alignment,
         sort();
         // run the alignment
         do_align(this->graph);
-        
+
         // Clean up the node we added. This is important because this graph will
         // later be extended with more material for softclip handling, and we
         // might need that node ID.
@@ -7549,7 +7549,7 @@ Alignment VG::align(const Alignment& alignment,
                 return get_node(node_id)->sequence().size();
             });
         //check_aln(*this, aln);
-        
+
         // Clean up the node we added. This is important because this graph will
         // later be extended with more material for softclip handling, and we
         // might need that node ID.
@@ -7578,7 +7578,7 @@ Alignment VG::align(const string& sequence,
     alignment.set_sequence(sequence);
     return align(alignment, aligner, max_query_graph_ratio, print_score_matrices);
 }
-    
+
 Alignment VG::align(const Alignment& alignment,
                     size_t max_query_graph_ratio,
                     bool print_score_matrices) {
@@ -10316,7 +10316,7 @@ void VG::max_flow(const string& ref_name) {
         swap_nodes(graph.mutable_node(i), (*n).node);
     }
 //    rebuild_indexes();
-    cout << endl;      
+    cout << endl;
 }
 
 void VG::fast_linear_sort(const string& ref_name){
@@ -10413,19 +10413,12 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     //assign weight to edges
     //edge weight is determined as number of paths, that go through the edge
     WeightedGraph weighted_graph = get_weighted_graph(ref_name);
-    EdgeMapping edges_out_nodes;
-    edges_out_nodes.insert(weighted_graph.edges_out_nodes.begin(), 
-            weighted_graph.edges_out_nodes.end());
-    
-    EdgeMapping edges_in_nodes;
-    edges_in_nodes.insert(weighted_graph.edges_in_nodes.begin(),
-            weighted_graph.edges_in_nodes.end());
     list<Mapping> ref_path(paths.get_path(ref_name).begin(),
             paths.get_path(ref_name).end());
     ref_path.reverse();
     set<id_t> backbone;
     list<id_t> reference;
-   
+
     for(auto const &mapping : ref_path) {
         backbone.insert(mapping.position().node_id());
         reference.push_back(mapping.position().node_id());
@@ -10434,165 +10427,33 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     for (auto const &entry : node_by_id) {
         nodes.insert(entry.first);
     }
-    
+
     set<id_t> unsorted_nodes(nodes.begin(), nodes.end());
-    vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
+    InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
+   
+    while (sorted_nodes.size() != graph.node_size()) {
+        cerr << "recursive sorting for missing nodes" << endl;
+//        cerr << "unsorted: " << unsorted_nodes.size() << endl;
+        cerr << "sorted: " << sorted_nodes.size() << " in graph: " <<
+                graph.node_size() << endl;
+        list<NodeTraversal> sorted_nodes_new;
     
-    map<id_t, list<id_t>> mapping_after;
-    map<id_t, list<id_t>> mapping_before;
-    set<id_t> left;
-
-    left.insert(unsorted_nodes.begin(), unsorted_nodes.end());
-    int erased = 0;
-    for(auto const &id : unsorted_nodes) {
-        
-        if (!left.count(id)) {
-            continue;
-        }
-
-        bool mapped = false;
-        for (auto const &edge : edges_out_nodes[id]) {
-            if (!unsorted_nodes.count(edge->to())) {
-//                cerr << "inserting before " << edge->to() << ": " << id;
-                list<id_t>& mapping = mapping_after[edge->to()];
-                mapping.push_back(id);
-                left.erase(id);
-                erased++;
-//                cerr << "  erase " << id << " ";
-        
-                std::queue<id_t> q({ id });
+        set<id_t> unsorted_nodes_new(growth.nodes.begin(), growth.nodes.end());
+        set<id_t> nodes_new(growth.nodes.begin(), growth.nodes.end());
  
-                while (!q.empty()) {
-                    id_t u = q.front();
-                    if (u != id) {
-                        mapping.push_back(u);
-//                        cerr << " " << u;    
-                    }
-                    q.pop();
-                    if (left.empty()) {
-                        continue;
-                    }
-                    for (auto const &inner_edge : edges_in_nodes[u]) {
-                        if (!left.count(inner_edge->from())) {
-                            continue;
-                        }    
-                        id_t v = inner_edge->from();
-                        q.push(v); 
-                        left.erase(v);
-                        erased++;
-//                        cerr << "  erase " << v << " ";
-                    }
-//                    for (auto const &inner_edge : edges_out_nodes[u]) {
-//                        if (!left.count(inner_edge->to())) {
-//                            continue;
-//                        }    
-//                        id_t v = inner_edge->to();
-//                        q.push(v); 
-//                        left.erase(v);
-//                        erased++; 
-////                        cerr << "  erase " << v << " ";
-//                    }
-                }
-//                cerr << endl;
-                mapped = true;
-                break;
-            }
+        set<id_t> backbone_new;
+        list<id_t> reference_new;
+        for (auto const &node : sorted_nodes) {
+            backbone_new.insert(node.node->id());
+            reference_new.push_back(node.node->id());
         }
-        
-        if (mapped) {
-            continue;
-        }
-
-        for (auto const &edge : edges_in_nodes[id]) {
-            if (!unsorted_nodes.count(edge->from())) {
-//                cerr << "inserting after " << edge->from() << ": " << id;
-                list<id_t>& mapping = mapping_before[edge->from()];
-                if (!mapped) {
-                    mapping.push_back(id);
-                    left.erase(id);
-                    erased++;
-//                    cerr << "  erase " << id << " ";
-                }
-                
-                std::queue<id_t> q({ id });
- 
-                while (!q.empty()) {
-                    id_t u = q.front();
-                    if (u != id) {
-                        mapping.push_front(u);
-//                        cerr << " " << u;   
-                    }
-                    q.pop();    
-                    if (left.empty()) {
-                        continue;
-                    }
-                    for (auto const &inner_edge : edges_out_nodes[u]) {
-                        if (!left.count(inner_edge->to())) {
-                            continue;
-                        }    
-                        id_t v = inner_edge->to();
-                        q.push(v);  
-                        left.erase(v);
-                        erased++;     
-//                        cerr << "  erase " << v << " ";
-                    }
-//                    for (auto const &inner_edge : edges_in_nodes[u]) {
-//                        if (!left.count(inner_edge->from())) {
-//                            continue;
-//                        }    
-//                        id_t v = inner_edge->from();
-//                        q.push(v);  
-//                        left.erase(v);
-//                        erased++;
-////                        cerr << "  erase " << v << " ";
-//                    }
-                }
-//                cerr << endl;
-                mapped = true;
-                break;
-            }
-        }
-    }  
-    
-
-    auto it = begin(sorted_nodes);
-    int count = 0;
-//    cerr << "inserting into sorted: ";
-    while(it != end(sorted_nodes)) {
-       
-        id_t id = it->node->id();
-    
-        for (auto const &inserted : mapping_before[id]) { 
-            NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
-            sorted_nodes.insert(it, node);
-            count++;
-//            cerr << inserted << " ";
-        } 
       
-        ++it;
-  
-        for(auto const &inserted : mapping_after[id]) {
-            NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
-            sorted_nodes.insert(it, node);
-            count++;
-//            cerr << inserted << " ";
-        }
-    }
-    
-//    cerr << endl;
-    
-    if (sorted_nodes.size() != graph.node_size()) {
-        cerr << "unsorted: " << unsorted_nodes.size() << endl;
-        cerr << "erased: " << erased << endl;
-        cerr << "inserted: " << count << endl;
-        cerr << "sorted: " << sorted_nodes.size() << " in graph: " << 
-                graph.node_size() <<endl;  
-        cerr << "left after: " << left.size() << endl;
-        for(auto const &id : left) {
-            cerr << id << " ";
-        }
-        cerr << endl;
+        InOutGrowth growth_new = InOutGrowth(nodes_new, backbone_new, reference_new);
+        find_in_out_web(sorted_nodes_new, growth_new, weighted_graph, unsorted_nodes_new);
+
+        sorted_nodes = sorted_nodes_new;
+        unsorted_nodes = unsorted_nodes_new;
     }
 }
 
@@ -10612,24 +10473,24 @@ int VG::get_node_degree(VG::WeightedGraph& wg, id_t node_id)
     return degree;
 }
 
-/* Weight is assigned to edges as number of paths, that go through hat edge. 
+/* Weight is assigned to edges as number of paths, that go through hat edge.
    Path goes through the edge, if both adjacent nodes of the edge are mapped to that path.*/
 VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
-           
+
     EdgeMapping edges_out_nodes;
-    EdgeMapping edges_in_nodes;     
+    EdgeMapping edges_in_nodes;
     map<Edge*, int> edge_weight;
     int ref_weight = paths._paths.size();
     if (ref_weight < 5) {
         ref_weight = 5;
     }
-    
+
     for (auto const &edge : edge_index) {
         //skip any reversing edges
         if (edge.first->from_start() || edge.first->to_end()) {
             continue;
         }
-        
+
         id_t from = edge.first->from();
         id_t to = edge.first->to();
 
@@ -10655,7 +10516,7 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         edge_weight[edge.first] = weight;
 //        cerr << from << "->" << to << " " << weight << endl;
     }
-    
+
     return WeightedGraph(edges_out_nodes, edges_in_nodes, edge_weight);
 }
 
@@ -10757,48 +10618,39 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
                             InOutGrowth& in_out_growth,
                             WeightedGraph& weighted_graph,
                             set<id_t>& unsorted_nodes) {
-     
+
     set<id_t> backbone = in_out_growth.backbone;
     set<id_t> nodes = in_out_growth.nodes;
     list<id_t> ref_path = in_out_growth.ref_path;
-    
-//    cerr << "backbone: ";
-//    for(auto const &id : ref_path) {
-//        cerr << id << " ";
-//    }
-//    cerr << endl;
-//    
-//     cerr << "nodes: ";
-//    for(auto const &id : nodes) {
-//        cerr << id << " ";
-//    }
-//    cerr << endl;
-    
+
     //for efficiency if size of the backbone == size of the nodes
     //we just add all backbone to sorted nodes and quit
     if (nodes.size() == backbone.size()) {
         for (auto const &id: ref_path) {
+            if (!unsorted_nodes.count(id)) {
+                continue;
+            }
             NodeTraversal node = NodeTraversal(node_by_id[id], false);
             sorted_nodes.push_back(node);
             unsorted_nodes.erase(id);
         }
         return;
     }
-    
+
     EdgeMapping& edges_out_nodes = weighted_graph.edges_out_nodes;
     EdgeMapping& edges_in_nodes = weighted_graph.edges_in_nodes;
     map<Edge*, int>& edge_weight = weighted_graph.edge_weight;
-     
+
     //add source and sink nodes
     id_t source = graph.node_size() + 1;
     id_t sink = graph.node_size() + 2;
     id_t graph_size = sink + 1;
-    
+
     set<Edge*> out_joins;
     set<Edge*> in_joins;
-    
+
     map<id_t, map<id_t, int>> weighted_sub_graph;
-    
+
     //determine max outgoing weight
     int max_weight = 0;
     for(auto const &node : nodes) {
@@ -10808,9 +10660,6 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
                 continue;
             }
             current_weight += edge_weight[edge];
-            if (backbone.count(node) && backbone.count(edge->to())) {
-                continue;
-            }
             if (backbone.count(node) && !backbone.count(edge->to())) {
                 out_joins.insert(edge);
             }
@@ -10818,10 +10667,10 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
             if (!backbone.count(node) && backbone.count(edge->to())) {
                 in_joins.insert(edge);
                 continue;
-            } 
+            }
             weighted_sub_graph[edge->from()][edge->to()] = edge_weight[edge];
         }
-        
+
         if (current_weight > max_weight) {
             max_weight = current_weight;
         }
@@ -10829,7 +10678,7 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
     //set weight for source edges
     for (auto const &edge : out_joins) {
         weighted_sub_graph[source][edge->from()] = max_weight + 1;
-          
+
     }
     //set weight for sink edges
     for (auto const &edge : in_joins) {
@@ -10837,7 +10686,7 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
     }
 
     //find min-cut edges
-    vector<pair<id_t,id_t>> cut = min_cut(weighted_sub_graph, nodes, source, 
+    vector<pair<id_t,id_t>> cut = min_cut(weighted_sub_graph, nodes, source,
                                                     sink, edges_out_nodes, in_joins);
     //remove min cut edges
     for(auto const &edge : cut) {
@@ -10849,29 +10698,12 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
                 }
             }
         }
-            
+
         remove_edge(edges_out_nodes, edge.first, to, false);
         remove_edge(edges_in_nodes, to, edge.first, true);
     }
-            
+
     set<id_t> visited;
-//    cerr << "edges out nodes" << endl;
-//    for (auto const &entry: weighted_graph.edges_out_nodes) {
-//        id_t tmp = entry.first;
-//        for (auto const &id : entry.second) {
-//            cerr << tmp << ":" << id->from() << "->" << id->to() << endl;
-//        }
-//    }
-//    cerr << endl;
-//    
-//    cerr << "edges in  nodes" << endl;
-//    for (auto const &entry: weighted_graph.edges_in_nodes) {
-//        id_t tmp = entry.first;
-//        for (auto const &id : entry.second) {
-//            cerr << tmp << ":" << id->from() << "->" << id->to() << endl;
-//        }
-//    }
-//    cerr << endl;
     visited.insert(backbone.begin(), backbone.end());
     for (auto &current_id: ref_path) {
         NodeTraversal node = NodeTraversal(node_by_id[current_id], false);
@@ -10879,69 +10711,69 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
         process_in_out_growth(edges_out_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sorted_nodes, false, unsorted_nodes);
         //add backbone node to the result
-        sorted_nodes.push_back(node);
-         unsorted_nodes.erase(current_id);
+        if (unsorted_nodes.count(current_id)) {
+            sorted_nodes.push_back(node);
+            unsorted_nodes.erase(current_id);
+        }
         //in growth
         process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sorted_nodes, true, unsorted_nodes);
     }
 }
-
 /*
-    Determines the presence of a in- out- growth, finds its backbone and calls min cut algorithm.
-*/
+        Determines the presence of a in- out- growth, finds its backbone and calls min cut algorithm.
+     */
 void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
-                                InOutGrowth& in_out_growth,
-                                WeightedGraph& weighted_graph,
-                                set<id_t>& visited, 
-                                list<NodeTraversal>& sorted_nodes,
-                                bool reverse,
-                                set<id_t>& unsorted_nodes) {
+        InOutGrowth& in_out_growth,
+        WeightedGraph& weighted_graph,
+        set<id_t>& visited,
+        list<NodeTraversal>& sorted_nodes,
+        bool reverse,
+        set<id_t>& unsorted_nodes) {
 
-    if (!nodes_to_edges.count(current_id))
-        return;    
+    if (!nodes_to_edges.count(current_id) || nodes_to_edges[current_id].size() == 0)
+        return;
     set<id_t> backbone = in_out_growth.backbone;
     set<id_t> nodes = in_out_growth.nodes;
-    for (auto &edge : nodes_to_edges[current_id]) {
-        id_t start_node = reverse ? edge->from() : edge->to();
-        
-        if (nodes.count(start_node) && !backbone.count(start_node) && 
-                !visited.count(start_node)){    
-            set<id_t> new_backbone;
-            list<id_t> new_ref_path;
-            while (true) {
-                if (new_backbone.count(start_node)|| visited.count(start_node)) {
-                    break;
+    set<id_t> new_backbone;
+    list<id_t> new_ref_path;
+    id_t start_node = current_id;
+    
+    while (true) {
+        if (new_backbone.count(start_node) || (start_node != current_id && 
+                visited.count(start_node))) {
+            break;
+        }
+        new_backbone.insert(start_node);
+        new_ref_path.push_back(start_node);
+        int weight = 0;
+        Edge* next_edge;
+        //take edges with maximum weight to the new reference path
+        for (auto const &out_edge : nodes_to_edges[start_node]) {
+            if (weighted_graph.edge_weight[out_edge] > weight) {
+                id_t tmp = reverse ? out_edge->from() : out_edge->to();
+                if (!nodes.count(tmp) || backbone.count(tmp) ||
+                        new_backbone.count(tmp) || visited.count(tmp)) {
+                    continue;
                 }
-                new_backbone.insert(start_node);
-                new_ref_path.push_back(start_node);
-                int weight = 0;
-                Edge* next_edge;
-                //take edges with maximum weight to the new reference path
-                for (auto const &out_edge : nodes_to_edges[start_node]) {                                    
-                    if (weighted_graph.edge_weight[out_edge] > weight) {
-                        id_t tmp = reverse ? out_edge->from() : out_edge->to();
-                        if (!nodes.count(tmp) || backbone.count(tmp) || 
-                                new_backbone.count(tmp)|| visited.count(tmp)) {
-                            continue;
-                        }
-                        start_node = tmp;
-                        weight = weighted_graph.edge_weight[out_edge];
-                        next_edge = out_edge;
-                        
-                    }
-                }
+                start_node = tmp;
+                weight = weighted_graph.edge_weight[out_edge];
+                next_edge = out_edge;
 
-            }  
-            set<id_t> web;
-            mark_dfs(nodes_to_edges, reverse ? edge->from() : edge->to(), web, visited, reverse, nodes, backbone);
-            if (!reverse) 
-                new_ref_path.reverse();
-            InOutGrowth growth = InOutGrowth(web, new_backbone, new_ref_path);      
-            find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
+            }
         }
     }
-        
+
+    set<id_t> web;
+    mark_dfs(nodes_to_edges, current_id, web, visited, reverse, nodes, backbone);
+    if (web.size() == 1 && web.count(current_id)) {
+        return;
+    }
+    if (!reverse)
+        new_ref_path.reverse();
+    InOutGrowth growth = InOutGrowth(web, new_backbone, new_ref_path);
+    find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
+    
 }
 
 void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool reverse) {
@@ -10950,10 +10782,10 @@ void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool rever
         auto it = begin(edges);
         while (it != end(edges)) {
             id_t next = reverse ? (*it)->from() : (*it)->to();
-       
+
             if (next == to) {
                 edges.erase(it);
-//                cerr << "removing edge " << reverse << " " << node << " " << to << endl; 
+//                cerr << "removing edge " << reverse << " " << node << " " << to << endl;
             } else {
                 ++it;
             }
@@ -10976,7 +10808,7 @@ void VG::mark_dfs(EdgeMapping& edges_to_nodes, id_t s,
         q.pop();
         if (edges_to_nodes.count(s)) {
             for (auto const &edge: edges_to_nodes[s]) {
-                id_t next_node = reverse ? edge->from() : edge->to(); 
+                id_t next_node = reverse ? edge->from() : edge->to();
                 if (!visited.count(next_node) && nodes.count(next_node)
                         && !backbone.count(next_node)) {
                     visited.insert(next_node);
@@ -10988,24 +10820,24 @@ void VG::mark_dfs(EdgeMapping& edges_to_nodes, id_t s,
     }
 
 }
-    
+
 /* Returns true if there is a path from source 's' to sink 't' in
    residual graph. Also fills parent[] to store the path */
-bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s, 
+bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
             id_t t, map<id_t, id_t>& parent) {
     // Create a visited array and mark all vertices as not visited
     set<id_t> visited;
 
     // Create a queue, enqueue source vertex and mark source vertex
     // as visited
-    std::queue<id_t> q({ s }); 
+    std::queue<id_t> q({ s });
     visited.insert(s);
     parent[s] = -1;
 
     // Standard BFS Loop
     while (!q.empty()) {
         id_t u = q.front();
-        q.pop();    
+        q.pop();
         for (auto const &weight : edge_weight[u]) {
             if (weight.second <= 0) {
                 continue;
@@ -11017,7 +10849,7 @@ bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
                 visited.insert(v);
                   if (v == t) {
                     return true;
-                }        
+                }
             }
         }
     }
@@ -11029,7 +10861,7 @@ bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
 
 
 void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight) {
-    
+
     visited.insert(s);
     std::stack<id_t> q({ s });
     while (!q.empty()) {
@@ -11039,9 +10871,9 @@ void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, i
             id_t to = weight.first;
             if (weight.second && !visited.count(to)) {
                 visited.insert(to);
-                q.push(to);   
+                q.push(to);
             }
-        } 
+        }
     }
 }
 
@@ -11050,7 +10882,7 @@ void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, i
 
 vector<pair<id_t,id_t>> VG::min_cut(map<id_t, map<id_t, int>>& graph_weight,
                 set<id_t>& nodes,
-                id_t s, id_t t, 
+                id_t s, id_t t,
                 EdgeMapping& edges_out_nodes,
                 set<Edge*>& in_joins) {
     id_t u, v;
@@ -11085,17 +10917,17 @@ vector<pair<id_t,id_t>> VG::min_cut(map<id_t, map<id_t, int>>& graph_weight,
 
     nodes.erase(s);
     nodes.erase(t);
-    
+
     for(auto const node_id : nodes) {
         for (auto const &edge : edges_out_nodes[node_id]) {
             id_t to = edge->to();
             if (!nodes.count(to)) {
                 continue;
             }
-            
+
             if (in_joins.count(edge)) {
                  to = t;
-            }     
+            }
             if (visited_set.count(node_id) && !visited_set.count(to)) {
 //                cerr << node_id << " - " << to << endl;
                 //remove min cut edges
