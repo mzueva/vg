@@ -10351,93 +10351,114 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     vg::VG::InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
     
-    map<id_t, deque<id_t>> mapping_after;
-    map<id_t, deque<id_t>> mapping_before;
+    map<id_t, list<id_t>> mapping_after;
+    map<id_t, list<id_t>> mapping_before;
     set<id_t> left;
 
     left.insert(unsorted_nodes.begin(), unsorted_nodes.end());
     int erased = 0;
-//    cerr << "left: " << left.size() << endl;
     for(auto const &id : unsorted_nodes) {
+        
         if (!left.count(id)) {
             continue;
         }
-        if (id == 3346) {
-            cerr << id << endl;
-        }
+
         bool mapped = false;
         for (auto const &edge : edges_out_nodes[id]) {
             if (!unsorted_nodes.count(edge->to())) {
 //                cerr << "inserting before " << edge->to() << ": " << id;
-                mapping_after[edge->to()].push_back(id);
+                list<id_t>& mapping = mapping_after[edge->to()];
+                mapping.push_back(id);
                 left.erase(id);
                 erased++;
-                id_t from = id;
+//                cerr << "  erase " << id << " ";
+        
                 std::queue<id_t> q({ id });
  
-                while (!q.empty() && !left.empty()) {
+                while (!q.empty()) {
                     id_t u = q.front();
-                    q.pop();    
+                    if (u != id) {
+                        mapping.push_back(u);
+//                        cerr << " " << u;    
+                    }
+                    q.pop();
+                    if (left.empty()) {
+                        continue;
+                    }
                     for (auto const &inner_edge : edges_in_nodes[u]) {
                         if (!left.count(inner_edge->from())) {
                             continue;
                         }    
                         id_t v = inner_edge->from();
-                        q.push(v);
+                        q.push(v); 
                         left.erase(v);
                         erased++;
-                        mapping_after[edge->to()].push_back(v);
-//                        cerr << " " << v;                   
+//                        cerr << "  erase " << v << " ";
                     }
-                }
-                
-                std::queue<id_t> s({ id });
-                while (!s.empty() && !left.empty()) {
-                    id_t u = s.front();
-                    s.pop();    
-                    for (auto const &inner_edge : edges_out_nodes[u]) {
-                        if (!left.count(inner_edge->from())) {
-                            continue;
-                        }    
-                        id_t v = inner_edge->from();
-                        s.push(v);
-                        left.erase(v);
-                        erased++;
-                        mapping_after[edge->to()].push_front(v);
-//                        cerr << " " << v;                   
-                    }
+//                    for (auto const &inner_edge : edges_out_nodes[u]) {
+//                        if (!left.count(inner_edge->to())) {
+//                            continue;
+//                        }    
+//                        id_t v = inner_edge->to();
+//                        q.push(v); 
+//                        left.erase(v);
+//                        erased++; 
+////                        cerr << "  erase " << v << " ";
+//                    }
                 }
 //                cerr << endl;
                 mapped = true;
                 break;
             }
         }
+        
         if (mapped) {
             continue;
-        } 
+        }
+
         for (auto const &edge : edges_in_nodes[id]) {
             if (!unsorted_nodes.count(edge->from())) {
-//                cerr << "inserting after " << edge->from() << " to " << id << endl;
-                mapping_before[edge->from()].push_back(id);
-                left.erase(id);
-                 erased++;
-                id_t from = id;
+//                cerr << "inserting after " << edge->from() << ": " << id;
+                list<id_t>& mapping = mapping_before[edge->from()];
+                if (!mapped) {
+                    mapping.push_back(id);
+                    left.erase(id);
+                    erased++;
+//                    cerr << "  erase " << id << " ";
+                }
+                
                 std::queue<id_t> q({ id });
  
-                while (!q.empty() && !left.empty()) {
+                while (!q.empty()) {
                     id_t u = q.front();
+                    if (u != id) {
+                        mapping.push_front(u);
+//                        cerr << " " << u;   
+                    }
                     q.pop();    
+                    if (left.empty()) {
+                        continue;
+                    }
                     for (auto const &inner_edge : edges_out_nodes[u]) {
                         if (!left.count(inner_edge->to())) {
                             continue;
                         }    
                         id_t v = inner_edge->to();
-                        q.push(v);
+                        q.push(v);  
                         left.erase(v);
-                         erased++;
-                        mapping_before[edge->from()].push_front(v);
-//                        cerr << " " << v;                   
+                        erased++;     
+//                        cerr << "  erase " << v << " ";
                     }
+//                    for (auto const &inner_edge : edges_in_nodes[u]) {
+//                        if (!left.count(inner_edge->from())) {
+//                            continue;
+//                        }    
+//                        id_t v = inner_edge->from();
+//                        q.push(v);  
+//                        left.erase(v);
+//                        erased++;
+////                        cerr << "  erase " << v << " ";
+//                    }
                 }
 //                cerr << endl;
                 mapped = true;
@@ -10449,26 +10470,32 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
 
     auto it = begin(sorted_nodes);
     int count = 0;
+//    cerr << "inserting into sorted: ";
     while(it != end(sorted_nodes)) {
        
         id_t id = it->node->id();
-        
-        for (auto const &inserted : mapping_before[id]) {
+    
+        for (auto const &inserted : mapping_before[id]) { 
             NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
             sorted_nodes.insert(it, node);
             count++;
+//            cerr << inserted << " ";
         } 
+      
         ++it;
+  
         for(auto const &inserted : mapping_after[id]) {
             NodeTraversal node = NodeTraversal(node_by_id[inserted], false);
             sorted_nodes.insert(it, node);
             count++;
-        }         
+//            cerr << inserted << " ";
+        }
     }
     
-    cerr << endl;
+//    cerr << endl;
     
     if (sorted_nodes.size() != graph.node_size()) {
+        cerr << "unsorted: " << unsorted_nodes.size() << endl;
         cerr << "erased: " << erased << endl;
         cerr << "inserted: " << count << endl;
         cerr << "sorted: " << sorted_nodes.size() << " in graph: " << 
@@ -10488,7 +10515,10 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
     EdgeMapping edges_out_nodes;
     EdgeMapping edges_in_nodes;     
     map<Edge*, int> edge_weight;
-    int ref_weight = 5;
+    int ref_weight = paths._paths.size();
+    if (ref_weight < 5) {
+        ref_weight = 5;
+    }
     
     for (auto const &edge : edge_index) {
         //skip any reversing edges
@@ -10592,6 +10622,9 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
                 continue;
             }
             current_weight += edge_weight[edge];
+            if (backbone.count(node) && backbone.count(edge->to())) {
+                continue;
+            }
             if (backbone.count(node) && !backbone.count(edge->to())) {
                 out_joins.insert(edge);
             }
