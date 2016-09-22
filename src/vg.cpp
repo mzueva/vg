@@ -10629,44 +10629,31 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         if (edge.first->from_start() || edge.first->to_end()) {
             continue;
         }
+        
+        id_t from = edge.first->from();
+        id_t to = edge.first->to();
 
         Node* nodeTo = node_by_id[edge.first->to()];
         edges_out_nodes[edge.first->from()].push_back(edge.first);
         edges_in_nodes[edge.first->to()].push_back(edge.first);
 
         //assign weight to the minimum number of paths of the adjacent nodes
-        NodeMapping from_node_mapping = paths.get_node_mapping(edge.first->from());
-        NodeMapping to_node_mapping = paths.get_node_mapping(edge.first->to());
-        int weight = 0;
-
-        //if this is a reference edge, increase the weight
-        if (from_node_mapping.count(ref_name) &&
-                to_node_mapping.count(ref_name)) {
-            //for (auto const &mapping : to_node_mapping[ref_name]) {
-            if((*to_node_mapping[ref_name].begin())->rank() == (*from_node_mapping[ref_name].begin())->rank() + 1){
-            //if(mapping->rank() == nodeTo->rank() - 1)
-                weight += ref_weight;
-            }
-        }
+        NodeMapping from_node_mapping = paths.get_node_mapping(from);
+//        NodeMapping to_node_mapping = paths.get_node_mapping(to);
+        int weight = 1;
 
         for (auto const &path_mapping : from_node_mapping) {
             string path_name = path_mapping.first;
-            if (to_node_mapping.count(path_name)) {
-                for (auto const &mapping : to_node_mapping[path_name]) {
-                    if (mapping->position().node_id() == nodeTo->id()) {
-                        weight++;
-                    }
+            if (paths.are_consecutive_nodes_in_path(from, to, path_name)) {
+                if (path_name == ref_name) {
+                    weight += ref_weight;
                 }
-
+                weight++;
             }
         }
 
-        //we do not allow zero weight
-        if (!weight) {
-            weight = 1;
-        }
-
         edge_weight[edge.first] = weight;
+//        cerr << from << "->" << to << " " << weight << endl;
     }
     
     return WeightedGraph(edges_out_nodes, edges_in_nodes, edge_weight);
