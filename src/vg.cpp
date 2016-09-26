@@ -10433,7 +10433,7 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes);
    
     while (sorted_nodes.size() != graph.node_size()) {
-        cerr << "recursive sorting for missing nodes" << endl;
+        cerr << "additional sorting for missing nodes" << endl;
 //        cerr << "unsorted: " << unsorted_nodes.size() << endl;
         cerr << "sorted: " << sorted_nodes.size() << " in graph: " <<
                 graph.node_size() << endl;
@@ -10450,9 +10450,13 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
         }
       
         InOutGrowth growth_new = InOutGrowth(nodes_new, backbone_new, reference_new);
-        find_in_out_web(sorted_nodes_new, growth_new, weighted_graph, unsorted_nodes_new);
+        WeightedGraph weighted_graph_new = get_weighted_graph(ref_name);
+        find_in_out_web(sorted_nodes_new, growth_new, weighted_graph_new, unsorted_nodes_new);
 
         sorted_nodes = sorted_nodes_new;
+        if (unsorted_nodes.size() == unsorted_nodes_new.size()) {
+            cerr << "Failed to insert missing nodes"<< endl;
+        }
         unsorted_nodes = unsorted_nodes_new;
     }
 }
