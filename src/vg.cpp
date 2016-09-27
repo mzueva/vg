@@ -10456,6 +10456,7 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
         sorted_nodes = sorted_nodes_new;
         if (unsorted_nodes.size() == unsorted_nodes_new.size()) {
             cerr << "Failed to insert missing nodes"<< endl;
+            return;
         }
         unsorted_nodes = unsorted_nodes_new;
     }
