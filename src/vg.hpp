@@ -510,6 +510,8 @@ public:
         const function<void(Node*)>& node_begin_fn,
         // called when node goes out of scope
         const function<void(Node*)>& node_end_fn,
+        // called to check if we should stop the DFS
+        const function<bool(void)>& break_fn,
         // called when an edge is encountered
         const function<void(Edge*)>& edge_fn,
         // called when an edge forms part of the DFS spanning tree
@@ -521,6 +523,10 @@ public:
     // specialization of dfs for only handling nodes
     void dfs(const function<void(Node*)>& node_begin_fn,
              const function<void(Node*)>& node_end_fn);
+    // specialization of dfs for only handling nodes + break function
+    void dfs(const function<void(Node*)>& node_begin_fn,
+             const function<void(Node*)>& node_end_fn,
+             const function<bool(void)>& break_fn);
 
     // is the graph empty?
     bool empty(void);
@@ -707,9 +713,9 @@ public:
     void swap_nodes(Node* a, Node* b);
 
     //sorts graph using max-flow algorithm	
-    void max_flow(const string& ref_name);
-    void fast_linear_sort(const string& ref_name);
-    void max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name);
+    void max_flow(const string& ref_name, bool isGrooming = true);
+    void fast_linear_sort(const string& ref_name, bool isGrooming = true);
+    void max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name, bool isGrooming = true);
     //Structure for holding weighted edges of the graph
     struct WeightedGraph {
         EdgeMapping edges_out_nodes;
@@ -726,7 +732,23 @@ public:
     };
     int get_node_degree(WeightedGraph &wg, id_t node_id);
 
-    WeightedGraph get_weighted_graph(const string& ref_name);
+    WeightedGraph get_weighted_graph(const string& ref_name, bool isGrooming = true);
+    void update_in_out_edges(EdgeMapping& edges_in, EdgeMapping& edges_out, Edge* e);
+    void erase_in_out_edges(EdgeMapping& edges_in, EdgeMapping& edges_out, Edge* e);
+    void reverse_edge(Edge* &e);
+    void reverse_from_start_to_end_edge(Edge* &e);
+    // a(from_start ==true) -> b        =>        not a (from_start == false)  -> b
+    id_t from_simple_reverse(Edge* &e);
+    // b(from_start ==true) -> a        =>        not a (from_start == false)  -> b
+    id_t from_simple_reverse_orientation(Edge* &e);
+    // a -> b (to_end ==true)       =>        a -> not b(to_end ==false)
+    id_t to_simple_reverse(Edge* &e);
+    // b -> a (to_end ==true)       =>        a -> not b(to_end ==false)
+    id_t to_simple_reverse_orientation(Edge* &e);
+    vector<set<id_t>> get_cc_in_wg(EdgeMapping& edges_in, EdgeMapping& edges_out,
+                                   const set<id_t>& all_nodes, id_t start_ref_node);
+    void groom_components(EdgeMapping& edges_in, EdgeMapping& edges_out, set<id_t>& isolated_nodes, set<id_t>& main_nodes,
+                          map<id_t, set<Edge*>> &minus_start, map<id_t, set<Edge*>> &minus_end);
     struct InOutGrowth {
         set<id_t> nodes;
         set<id_t> backbone;
@@ -783,6 +805,7 @@ public:
     // Will modify the graph by re-ordering the nodes.
     
     // align without base quality adjusted scores
+    // May add nodes to the graph, but cleans them up afterward
     Alignment align(const string& sequence,
                     Aligner& aligner,
                     size_t max_query_graph_ratio = 0,
@@ -793,6 +816,7 @@ public:
                     bool print_score_matrices = false);
     
     // align with default Aligner
+    // May add nodes to the graph, but cleans them up afterward
     Alignment align(const Alignment& alignment,
                     size_t max_query_graph_ratio = 0,
                     bool print_score_matrices = false);

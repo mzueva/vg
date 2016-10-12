@@ -8915,18 +8915,20 @@ int main_test(int argc, char** argv){
 void help_sort(char** argv){
     cerr << "usage: " << argv[0] << " sort [options] -i <input_file> -r <reference_name> > sorted.vg " << endl
          << "options: " << endl
-         << "           -g, --gfa           input in GFA format" << endl
-         << "           -i, --in            input file" << endl
-         << "           -r, --ref           reference name" << endl
+         << "           -g, --gfa              input in GFA format" << endl
+         << "           -i, --in               input file" << endl
+         << "           -r, --ref              reference name" << endl
+         << "           -w, --without-grooming no grooming mode" << endl
          << endl;
 }
 
 void help_fsort(char** argv){
     cerr << "usage: " << argv[0] << " fsort [options] -i <input_file> -r <reference_name> > sorted.vg " << endl
          << "options: " << endl
-         << "           -g, --gfa           input in GFA format" << endl
-         << "           -i, --in            input file" << endl
-         << "           -r, --ref           reference name" << endl
+         << "           -g, --gfa              input in GFA format" << endl
+         << "           -i, --in               input file" << endl
+         << "           -r, --ref              reference name" << endl
+         << "           -w, --without-grooming no grooming mode" << endl
          << endl;
 }
 
@@ -8936,7 +8938,7 @@ int main_sort(int argc, char *argv[]) {
     bool gfa_input = false;
     string file_name = "";
     string reference_name = "";
-    
+    bool without_grooming = false;
     int c;
     while (true) {
         static struct option long_options[] =
@@ -8944,11 +8946,12 @@ int main_sort(int argc, char *argv[]) {
                 {"gfa", no_argument, 0, 'g'},
                 {"in", required_argument, 0, 'i'},
                 {"ref", required_argument, 0, 'r'},
+                {"without-grooming", no_argument, 0, 'w'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long (argc, argv, "i:r:g",
+        c = getopt_long (argc, argv, "i:r:gw",
                          long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -8965,6 +8968,9 @@ int main_sort(int argc, char *argv[]) {
             break;
         case 'i':
             file_name = optarg;
+            break;
+        case 'w':
+            without_grooming = true;
             break;
         case 'h':
         case '?':
@@ -8992,9 +8998,18 @@ int main_sort(int argc, char *argv[]) {
         graph = new VG(in);
     }
         
-    graph->max_flow(reference_name);    
+    graph->max_flow(reference_name);
+    if(gfa_input && !without_grooming)
+    {
+        size_t position = file_name.find(".");
+        string extract_name = (string::npos == position)? file_name : file_name.substr(0, position);
+        std::ofstream outfile (extract_name + "_groom.gfa",std::ofstream::binary);
+        graph->to_gfa(outfile);
+        outfile.close();
+    }
 //    graph->serialize_to_ostream(std::cout);
     delete graph;  
+    in.close();
     return 0;
 }
 
@@ -9005,7 +9020,7 @@ int main_fast_sort(int argc, char *argv[]) {
     bool gfa_input = false;
     string file_name = "";
     string reference_name = "";
-
+    bool without_grooming = false;
     int c;
     while (true) {
         static struct option long_options[] =
@@ -9013,11 +9028,12 @@ int main_fast_sort(int argc, char *argv[]) {
                 {"gfa", no_argument, 0, 'g'},
                 {"in", required_argument, 0, 'i'},
                 {"ref", required_argument, 0, 'r'},
+                {"without-grooming", no_argument, 0, 'w'},
                 {0, 0, 0, 0}
             };
 
         int option_index = 0;
-        c = getopt_long (argc, argv, "i:r:g",
+        c = getopt_long (argc, argv, "i:r:gw",
                          long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -9034,6 +9050,9 @@ int main_fast_sort(int argc, char *argv[]) {
             break;
         case 'i':
             file_name = optarg;
+            break;
+        case 'w':
+            without_grooming = true;
             break;
         case 'h':
         case '?':
@@ -9061,9 +9080,19 @@ int main_fast_sort(int argc, char *argv[]) {
         graph = new VG(in);
     }
 
-    graph->fast_linear_sort(reference_name);
+    graph->fast_linear_sort(reference_name, !without_grooming);
+    if(gfa_input && !without_grooming)
+    {
+        size_t position = file_name.find(".");
+        string extract_name = (string::npos == position)? file_name : file_name.substr(0, position);
+        std::ofstream outfile (extract_name + "_groom.gfa",std::ofstream::binary);
+        graph->to_gfa(outfile);
+        outfile.close();
+    }
+
 //    graph->serialize_to_ostream(std::cout);
     delete graph;
+    in.close();
     return 0;
 }
 
