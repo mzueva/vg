@@ -10481,9 +10481,9 @@ int VG::get_node_degree(VG::WeightedGraph& wg, id_t node_id)
 
 /* Weight is assigned to edges as number of paths, that go through hat edge.
    Path goes through the edge, if both adjacent nodes of the edge are mapped to that path.*/
+
 VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming)
 {
-
     EdgeMapping edges_out_nodes;
     EdgeMapping edges_in_nodes;
     map<Edge*, int> edge_weight;
@@ -10491,13 +10491,13 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming
     if (ref_weight < 5) {
         ref_weight = 5;
     }
+
     this->flip_doubly_reversed_edges();
     //"bad" edges
     map<id_t, set<Edge*>> minus_start;//vertex - edges
     map<id_t, set<Edge*>> minus_end;//vertex - edges
     set<id_t> nodes;
     id_t start_ref_node = 0;
-    //Edge* minus_minus_edge;
     for (auto &edge : edge_index)
     {
         id_t from = edge.first->from();
@@ -10515,6 +10515,7 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming
         //Node* nodeTo = node_by_id[edge.first->to()];
         nodes.insert(edge.first->from());
         nodes.insert(edge.first->to());
+
         //assign weight to the minimum number of paths of the adjacent nodes
         NodeMapping from_node_mapping = paths.get_node_mapping(from);
 //        NodeMapping to_node_mapping = paths.get_node_mapping(to);
@@ -10522,7 +10523,8 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming
 
         for (auto const &path_mapping : from_node_mapping) {
             string path_name = path_mapping.first;
-            if (paths.are_consecutive_nodes_in_path(from, to, path_name)) {
+            if (paths.are_consecutive_nodes_in_path(from, to, path_name))
+            {
                 if (path_name == ref_name)
                 {
                     weight += ref_weight;
@@ -10548,12 +10550,14 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming
             {
                 if(j != main_cc)
                     groom_components(edges_in_nodes, edges_out_nodes, ccs[j], ccs[main_cc], minus_start, minus_end);
+
             }
         }
         this->rebuild_edge_indexes();
     }
     return WeightedGraph(edges_out_nodes, edges_in_nodes, edge_weight);
 }
+
 
 void VG::groom_components(EdgeMapping& edges_in, EdgeMapping& edges_out, set<id_t>& isolated_nodes, set<id_t>& main_nodes,
                           map<id_t, set<Edge*>> &minus_start, map<id_t, set<Edge*>> &minus_end)
