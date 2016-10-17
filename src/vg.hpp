@@ -758,14 +758,17 @@ public:
     void find_in_out_web(   list<NodeTraversal>& sorted_nodes, 
                             InOutGrowth& in_out_growth,
                             WeightedGraph& weighted_graph,
-                            set<id_t>& unsorted_nodes);
+                            set<id_t>& unsorted_nodes, 
+                            id_t start_node,
+                            bool in_out);
     void process_in_out_growth( EdgeMapping& edges_out_nodes, id_t current_id,
                                 InOutGrowth& in_out_growth,
                                 WeightedGraph& weighted_graph,
                                 set<id_t>& visited,
                                 list<NodeTraversal>& sorted_nodes, 
                                 bool reverse, 
-                                set<id_t>& unsorted_nodes);
+                                set<id_t>& unsorted_nodes,
+                                bool in_out);
     void mark_dfs(EdgeMapping& graph_matrix, id_t s, set<id_t>& new_nodes, 
                 set<id_t>& visited, bool reverse, set<id_t>& nodes, set<id_t>& backbone);
     vector<pair<id_t,id_t>> min_cut(map<id_t, map<id_t, int>>& graph_weight, set<id_t>& nodes, id_t s, id_t t, 
