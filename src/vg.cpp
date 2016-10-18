@@ -11007,7 +11007,6 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
             sorted_nodes.push_back(node);
             if (current_id != start) {
                 unsorted_nodes.erase(current_id);
-//                cerr << "erasing " << current_id << endl;
             }
         }
 //        process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
@@ -11023,8 +11022,6 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
         if (in_out) {
             if (current_id != start) {
                 new_sorted.push_back(node);
-//                unsorted_nodes.erase(current_id);
-//                cerr << "erasing " << current_id << endl;
             }
         }
         process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
@@ -11102,7 +11099,7 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
     if (web.size() == 1 && web.count(current_id)) {
         return;
     }
-    if (in_out && reverse) {
+    if (in_out) {
         
     } else {
         new_ref_path.reverse();
@@ -11122,7 +11119,6 @@ void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool rever
 
             if (next == to) {
                 edges.erase(it);
-//                cerr << "removing edge " << reverse << " " << node << " " << to << endl;
             } else {
                 ++it;
             }
