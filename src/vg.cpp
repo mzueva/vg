@@ -10300,12 +10300,12 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
 
 }
 
-void VG::max_flow(const string& ref_name) {
+void VG::max_flow(const string& ref_name, bool isGrooming) {
     if (size() <= 1) return;
     // Topologically sort, which orders and orients all the nodes.
     list<NodeTraversal> sorted_nodes;
     paths.sort_by_mapping_rank();
-    max_flow_sort(sorted_nodes, ref_name);
+    max_flow_sort(sorted_nodes, ref_name, isGrooming);
     list<NodeTraversal>::reverse_iterator n = sorted_nodes.rbegin();
     int i = 0;
 //    cout << "result" << endl;
@@ -10319,14 +10319,15 @@ void VG::max_flow(const string& ref_name) {
     cout << endl;
 }
 
-void VG::fast_linear_sort(const string& ref_name){
+void VG::fast_linear_sort(const string& ref_name, bool isGrooming)
+{
     if (size() <= 1) return;
     // Topologically sort, which orders and orients all the nodes.
     list<NodeTraversal> sorted_nodes;
     paths.sort_by_mapping_rank();
 
     //get weighted graph
-    WeightedGraph weighted_graph = get_weighted_graph(ref_name);
+    WeightedGraph weighted_graph = get_weighted_graph(ref_name, isGrooming);
 
     //all nodes size
     id_t nodes_size =node_by_id.size();
@@ -10408,11 +10409,11 @@ void VG::fast_linear_sort(const string& ref_name){
     cout << endl;
 }
 
-void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name) {
+void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name, bool isGrooming) {
 
     //assign weight to edges
     //edge weight is determined as number of paths, that go through the edge
-    WeightedGraph weighted_graph = get_weighted_graph(ref_name);
+    WeightedGraph weighted_graph = get_weighted_graph(ref_name, isGrooming);
     list<Mapping> ref_path(paths.get_path(ref_name).begin(),
             paths.get_path(ref_name).end());
     ref_path.reverse();
@@ -10504,8 +10505,9 @@ int VG::get_node_degree(VG::WeightedGraph& wg, id_t node_id)
 
 /* Weight is assigned to edges as number of paths, that go through hat edge.
    Path goes through the edge, if both adjacent nodes of the edge are mapped to that path.*/
-VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
 
+VG::WeightedGraph VG::get_weighted_graph(const string& ref_name, bool isGrooming)
+{
     EdgeMapping edges_out_nodes;
     EdgeMapping edges_in_nodes;
     map<Edge*, int> edge_weight;
@@ -10514,18 +10516,29 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         ref_weight = 5;
     }
 
-    for (auto const &edge : edge_index) {
-        //skip any reversing edges
-        if (edge.first->from_start() || edge.first->to_end()) {
-            continue;
-        }
-
+    this->flip_doubly_reversed_edges();
+    //"bad" edges
+    map<id_t, set<Edge*>> minus_start;//vertex - edges
+    map<id_t, set<Edge*>> minus_end;//vertex - edges
+    set<id_t> nodes;
+    id_t start_ref_node = 0;
+    for (auto &edge : edge_index)
+    {
         id_t from = edge.first->from();
         id_t to = edge.first->to();
-
-        Node* nodeTo = node_by_id[edge.first->to()];
-        edges_out_nodes[edge.first->from()].push_back(edge.first);
-        edges_in_nodes[edge.first->to()].push_back(edge.first);
+        if (edge.first->from_start() || edge.first->to_end())
+        {
+                minus_start[from].insert(edge.first);
+                minus_end[to].insert(edge.first);
+        }
+        else
+        {
+            edges_out_nodes[edge.first->from()].push_back(edge.first);
+            edges_in_nodes[edge.first->to()].push_back(edge.first);
+        }
+        //Node* nodeTo = node_by_id[edge.first->to()];
+        nodes.insert(edge.first->from());
+        nodes.insert(edge.first->to());
 
         //assign weight to the minimum number of paths of the adjacent nodes
         NodeMapping from_node_mapping = paths.get_node_mapping(from);
@@ -10534,9 +10547,13 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
 
         for (auto const &path_mapping : from_node_mapping) {
             string path_name = path_mapping.first;
-            if (paths.are_consecutive_nodes_in_path(from, to, path_name)) {
-                if (path_name == ref_name) {
+            if (paths.are_consecutive_nodes_in_path(from, to, path_name))
+            {
+                if (path_name == ref_name)
+                {
                     weight += ref_weight;
+                    if(start_ref_node == 0)
+                        start_ref_node = edge.first->from();
                 }
                 weight++;
             }
@@ -10545,8 +10562,235 @@ VG::WeightedGraph VG::get_weighted_graph(const string& ref_name) {
         edge_weight[edge.first] = weight;
 //        cerr << from << "->" << to << " " << weight << endl;
     }
+    if (isGrooming)
+    {
+        // get connected components
+        vector<set<id_t>> ccs = get_cc_in_wg(edges_in_nodes, edges_out_nodes, nodes, start_ref_node);
+        // grooming
+        id_t main_cc = 0;
+        if(ccs.size() > 1)
+        {
+            for(id_t j = 0; j < ccs.size(); j++)
+            {
+                if(j != main_cc)
+                    groom_components(edges_in_nodes, edges_out_nodes, ccs[j], ccs[main_cc], minus_start, minus_end);
 
+            }
+        }
+        this->rebuild_edge_indexes();
+    }
     return WeightedGraph(edges_out_nodes, edges_in_nodes, edge_weight);
+}
+
+
+void VG::groom_components(EdgeMapping& edges_in, EdgeMapping& edges_out, set<id_t>& isolated_nodes, set<id_t>& main_nodes,
+                          map<id_t, set<Edge*>> &minus_start, map<id_t, set<Edge*>> &minus_end)
+{
+    vector<Edge*> from_minus_edges;
+    vector<Edge*> to_minus_edges;
+    auto nodes_it = isolated_nodes.begin();
+    //find all "bad" edeges
+    while (nodes_it != isolated_nodes.end())
+    {
+        if(minus_start.find(*nodes_it) != minus_start.end())
+        {
+            for(auto& e: minus_start[*nodes_it])
+            {
+                //find edge between main component and isolated component
+                if(main_nodes.find(e->from()) != main_nodes.end() || main_nodes.find(e->to()) != main_nodes.end() )
+                {
+                    if(e->from_start())
+                        from_minus_edges.push_back(e);
+                    if(e->to_end())
+                        to_minus_edges.push_back(e);
+                    //break;
+                }
+            }
+        }
+        id_t lol;
+        if(minus_end.find(*nodes_it) != minus_end.end())
+        {
+            lol = *nodes_it;
+            for(auto& e: minus_end[*nodes_it])
+            {
+                //find edge between main component and isolated component
+                if(main_nodes.find(e->from()) != main_nodes.end() || main_nodes.find(e->to()) != main_nodes.end() )
+                {
+                    if(e->from_start())
+                        from_minus_edges.push_back(e);
+                    if(e->to_end())
+                        to_minus_edges.push_back(e);
+                    //break;
+                }
+            }
+        }
+        nodes_it++;
+    }
+    //reverse "bad" edges
+    for(auto& e: from_minus_edges)
+    {
+        if(main_nodes.find(e->from()) != main_nodes.end())
+        {
+            from_simple_reverse_orientation(e);
+            update_in_out_edges(edges_in,edges_out, e);
+            continue;
+        }
+        if(main_nodes.find(e->to()) != main_nodes.end())
+        {
+            from_simple_reverse(e);
+            update_in_out_edges(edges_in,edges_out, e);
+        }
+    }
+    for(auto& e: to_minus_edges)
+    {
+        if(main_nodes.find(e->to()) != main_nodes.end())
+        {
+            to_simple_reverse_orientation(e);
+            update_in_out_edges(edges_in,edges_out, e);
+            continue;
+        }
+        if(main_nodes.find(e->from()) != main_nodes.end())
+        {
+            to_simple_reverse(e);
+            update_in_out_edges(edges_in,edges_out, e);
+        }
+    }
+
+    nodes_it = isolated_nodes.begin();
+    Edge* internal_edge;
+    vector<Edge*> edges_to_flip;
+    //reverse all internal edeges
+    while (nodes_it != isolated_nodes.end())
+    {
+        for(auto& e:edges_in[*nodes_it])
+        {
+
+            // if edge is internal
+            if(isolated_nodes.find(e->from()) != isolated_nodes.end())
+            {
+                internal_edge = e;
+                edges_to_flip.push_back(e);
+            }
+        }
+        nodes_it++;
+    }
+    for(auto& e: edges_to_flip)
+    {
+        internal_edge = e;
+        erase_in_out_edges(edges_in, edges_out, internal_edge);
+        reverse_edge(internal_edge);
+        update_in_out_edges(edges_in,edges_out, internal_edge);
+    }
+    //insert isolated set to main set
+    main_nodes.insert(isolated_nodes.begin(), isolated_nodes.end());
+}
+
+void VG::update_in_out_edges(EdgeMapping& edges_in, EdgeMapping& edges_out, Edge* e)
+{
+    edges_in[e->to()].push_back(e);
+    edges_out[e->from()].push_back(e);
+}
+
+void VG::erase_in_out_edges(EdgeMapping& edges_in, EdgeMapping& edges_out, Edge* e)
+{
+    int i = 0;
+    while(*(edges_in[e->to()].begin() + i) != e)
+        i++;
+    edges_in[e->to()].erase(edges_in[e->to()].begin() + i);
+    i = 0;
+    while(*(edges_out[e->from()].begin() + i) != e)
+        i++;
+    edges_out[e->from()].erase(edges_out[e->from()].begin() + i);
+}
+
+void VG::reverse_from_start_to_end_edge(Edge* &e)
+{
+    e->set_from_start(false);
+    e->set_to_end(false);
+    reverse_edge(e);
+}
+
+
+void VG::reverse_edge(Edge* &e)
+{
+    id_t tmp_vrtx = e->to();
+    e->set_to(e->from());
+    e->set_from(tmp_vrtx);
+}
+
+
+// a(from_start ==true) -> b        =>        not a (from_start == false)  -> b
+id_t VG::from_simple_reverse(Edge* &e)
+{
+    e->set_from_start(false);
+    return e->from();
+}
+
+// b(from_start ==true) -> a        =>        not a (from_start == false)  -> b
+id_t VG::from_simple_reverse_orientation(Edge* &e)
+{
+    e->set_from_start(false);
+    reverse_edge(e);
+    return e->from();
+}
+
+// a -> b (to_end ==true)       =>        a -> not b(to_end ==false)
+id_t VG::to_simple_reverse(Edge* &e)
+{
+    e->set_to_end(false);
+    return e->to();
+}
+
+// b -> a (to_end ==true)       =>        a -> not b(to_end ==false)
+id_t VG::to_simple_reverse_orientation(Edge* &e)
+{
+    reverse_edge(e);
+    e->set_to_end(false);
+    return e->to();
+}
+
+vector<set<id_t>> VG::get_cc_in_wg(EdgeMapping& edges_in,EdgeMapping& edges_out,
+                                   const set<id_t>& all_nodes, id_t start_ref_node)
+{
+    set<id_t> nodes(all_nodes.begin(), all_nodes.end());
+    vector<set<id_t>> result;
+    bool main_cc = true;
+    id_t s = start_ref_node;
+    nodes.erase(nodes.find(s));
+    while(nodes.size() > 0)
+    {
+        set<id_t> visited;
+        if(!main_cc)
+        {
+            s = *nodes.begin();
+            nodes.erase(nodes.begin());
+        }
+        main_cc = false;
+        std::stack<id_t> q({ s });
+        while (!q.empty())
+        {
+            s = q.top();
+            q.pop();
+            if (visited.find(s) != visited.end())
+                continue;
+            nodes.erase(s);
+            visited.insert(s);
+            for(const auto& e: edges_in[s])
+            {
+                id_t from = e->from();
+                if (visited.find(from ) == visited.end())
+                    q.push(from);
+            }
+            for(const auto& e: edges_out[s])
+            {
+                id_t to = e->to();
+                if (visited.find(to) == visited.end())
+                    q.push(to);
+            }
+        }
+        result.push_back(visited);
+    }
+    return result;
 }
 
 /* Iterate all edges adjacent to node, recalc degrees of related nodes.
