@@ -10443,7 +10443,7 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
 //        cerr << "unsorted: " << unsorted_nodes.size() << endl;
         cerr << "sorted: " << sorted_nodes.size() << " in graph: " <<
                 graph.node_size() << endl;
-        cerr << "unsorted: " << endl;
+        cerr << "unsorted: ";
         
         for (auto const &uns : unsorted_nodes) {
             cerr << uns << " ";
@@ -10469,7 +10469,8 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
                 unsorted_nodes_new, -1, false);
 
         sorted_nodes = sorted_nodes_new;
-        if (unsorted_nodes.size() == unsorted_nodes_new.size()) {
+        if (sorted_nodes.size() != graph.node_size() && 
+                unsorted_nodes.size() == unsorted_nodes_new.size()) {
             cerr << "Failed to insert missing nodes"<< endl;
             break;
         }
@@ -10656,12 +10657,13 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
     //we just add all backbone to sorted nodes and quit
     if (nodes.size() == backbone.size()) {
         for (auto const &id: ref_path) {
-            if (!unsorted_nodes.count(id)) {
+            if (!unsorted_nodes.count(id) || id == start) {
                 continue;
             }
             NodeTraversal node = NodeTraversal(node_by_id[id], false);
             sorted_nodes.push_back(node);
             unsorted_nodes.erase(id);
+//            cerr << "erasing " << id << endl;
         }
         return;
     }
@@ -10761,6 +10763,7 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
             sorted_nodes.push_back(node);
             if (current_id != start) {
                 unsorted_nodes.erase(current_id);
+//                cerr << "erasing " << current_id << endl;
             }
         }
 //        process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
@@ -10776,7 +10779,8 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
         if (in_out) {
             if (current_id != start) {
                 new_sorted.push_back(node);
-//            unsorted_nodes.erase(current_id);
+//                unsorted_nodes.erase(current_id);
+//                cerr << "erasing " << current_id << endl;
             }
         }
         process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
@@ -10794,6 +10798,7 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
             if (current_id != start) {
                 new_sorted.push_back(node);
 //                unsorted_nodes.erase(current_id);
+//                cerr << "erasing " << current_id << endl;
             }
         }
        
