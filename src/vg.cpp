@@ -10300,7 +10300,8 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
 
 }
 
-void VG::max_flow(const string& ref_name, bool isGrooming) {
+void VG::max_flow(const string& ref_name, bool isGrooming) 
+{
     if (size() <= 1) return;
     // Topologically sort, which orders and orients all the nodes.
     list<NodeTraversal> sorted_nodes;
@@ -10325,7 +10326,7 @@ void VG::fast_linear_sort(const string& ref_name, bool isGrooming)
     // Topologically sort, which orders and orients all the nodes.
     list<NodeTraversal> sorted_nodes;
     paths.sort_by_mapping_rank();
-
+    
     //get weighted graph
     WeightedGraph weighted_graph = get_weighted_graph(ref_name, isGrooming);
 
@@ -10340,7 +10341,8 @@ void VG::fast_linear_sort(const string& ref_name, bool isGrooming)
     //find sources
     for (auto const &entry : node_by_id)
     {
-        if(weighted_graph.edges_in_nodes.find(entry.first) == weighted_graph.edges_in_nodes.end() )
+        if(!weighted_graph.edges_in_nodes.count(entry.first) || 
+                weighted_graph.edges_in_nodes[entry.first].size() == 0)
         {
             sources.insert(entry.first);
             continue;
@@ -10409,7 +10411,9 @@ void VG::fast_linear_sort(const string& ref_name, bool isGrooming)
     cout << endl;
 }
 
-void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name, bool isGrooming) {
+void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, 
+        const string& ref_name, bool isGrooming) 
+{
 
     //assign weight to edges
     //edge weight is determined as number of paths, that go through the edge
@@ -10420,37 +10424,42 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
     set<id_t> backbone;
     list<id_t> reference;
 
-    for(auto const &mapping : ref_path) {
+    for(auto const &mapping : ref_path) 
+    {
         backbone.insert(mapping.position().node_id());
         reference.push_back(mapping.position().node_id());
     }
     set<id_t> nodes;
-    for (auto const &entry : node_by_id) {
+    for (auto const &entry : node_by_id) 
+    {
         nodes.insert(entry.first);
     }
 
     set<id_t> unsorted_nodes(nodes.begin(), nodes.end());
     InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes, -1, 
-            false);
+            false, 0);
    
-    if (sorted_nodes.size() > graph.node_size()) {
-        cerr << "Failed to sort graph " << endl;
-        cerr << "sorted: " << sorted_nodes.size() << " in graph: " << endl;
+    if (sorted_nodes.size() > graph.node_size()) 
+    {
+//        cerr << "Failed to sort graph " << endl;
+//        cerr << "sorted: " << sorted_nodes.size() << " in graph: " << endl;
         return;
     }
-    while (sorted_nodes.size() < graph.node_size()) {
-        cerr << "additional sorting for missing nodes" << endl;
+    while (sorted_nodes.size() < graph.node_size()) 
+    {
+//        cerr << "additional sorting for missing nodes" << endl;
 //        cerr << "unsorted: " << unsorted_nodes.size() << endl;
-        cerr << "sorted: " << sorted_nodes.size() << " in graph: " <<
-                graph.node_size() << endl;
-        cerr << "unsorted: ";
+//        cerr << "sorted: " << sorted_nodes.size() << " in graph: " <<
+//                graph.node_size() << endl;
+//        cerr << "unsorted: ";
         
-        for (auto const &uns : unsorted_nodes) {
-            cerr << uns << " ";
-        }
-        
-        cerr << endl;
+//        for (auto const &uns : unsorted_nodes) 
+//        {
+//            cerr << uns << " ";
+//        }
+//        
+//        cerr << endl;
         
         list<NodeTraversal> sorted_nodes_new;
     
@@ -10459,7 +10468,8 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
  
         set<id_t> backbone_new;
         list<id_t> reference_new;
-        for (auto const &node : sorted_nodes) {
+        for (auto const &node : sorted_nodes) 
+        {
             backbone_new.insert(node.node->id());
             reference_new.push_back(node.node->id());
         }
@@ -10467,20 +10477,23 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes, const string& ref_name
         InOutGrowth growth_new = InOutGrowth(nodes_new, backbone_new, reference_new);
         WeightedGraph weighted_graph_new = get_weighted_graph(ref_name);
         find_in_out_web(sorted_nodes_new, growth_new, weighted_graph_new, 
-                unsorted_nodes_new, -1, false);
+                unsorted_nodes_new, -1, false, 0);
 
         sorted_nodes = sorted_nodes_new;
         if (sorted_nodes.size() != graph.node_size() && 
-                unsorted_nodes.size() == unsorted_nodes_new.size()) {
-            cerr << "Failed to insert missing nodes"<< endl;
+                unsorted_nodes.size() == unsorted_nodes_new.size())
+        {
+//            cerr << "Failed to insert missing nodes"<< endl;
             break;
         }
         
         unsorted_nodes = unsorted_nodes_new;
     }
     
-    if (unsorted_nodes.size() != 0) {
-        for (auto const &id : unsorted_nodes) {
+    if (unsorted_nodes.size() != 0) 
+    {
+        for (auto const &id : unsorted_nodes) 
+        {
             NodeTraversal node = NodeTraversal(node_by_id[id], false);
             sorted_nodes.push_back(node);
         }
@@ -10891,17 +10904,24 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
                             InOutGrowth& in_out_growth,
                             WeightedGraph& weighted_graph,
                             set<id_t>& unsorted_nodes, 
-                            id_t start, bool in_out) {
-
-    set<id_t> backbone = in_out_growth.backbone;
-    set<id_t> nodes = in_out_growth.nodes;
-    list<id_t> ref_path = in_out_growth.ref_path;
+                            id_t start, bool in_out, int count) 
+{
+//    cerr << "enter recursion: " << count << endl;
+    set<id_t>& backbone = in_out_growth.backbone;
+    set<id_t>& nodes = in_out_growth.nodes;
+    list<id_t>& ref_path = in_out_growth.ref_path;
 
     //for efficiency if size of the backbone == size of the nodes
     //we just add all backbone to sorted nodes and quit
-    if (nodes.size() == backbone.size()) {
-        for (auto const &id: ref_path) {
-            if (!unsorted_nodes.count(id) || id == start) {
+    if (nodes.size() == backbone.size()) 
+    {
+        if (in_out) {
+            ref_path.reverse();
+        }
+        for (auto const &id: ref_path) 
+        {
+            if (!unsorted_nodes.count(id) || id == start) 
+            {
                 continue;
             }
             NodeTraversal node = NodeTraversal(node_by_id[id], false);
@@ -10909,6 +10929,13 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
             unsorted_nodes.erase(id);
 //            cerr << "erasing " << id << endl;
         }
+//        cerr << "backbone simple from " << start << ": ";
+//        for (auto const &id : ref_path) 
+//        {
+//            cerr << id << " ";
+//        }
+//        cerr << endl;
+//        cerr << "leaving recursion: " << count << endl;
         return;
     }
 
@@ -10928,40 +10955,47 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
 
     //determine max outgoing weight
     int max_weight = 0;
-    for(auto const &node : nodes) {
+    for(auto const &node : nodes) 
+    {
         int current_weight = 0;
-        for (auto const &edge : edges_out_nodes[node]) {
+        for (auto const &edge : edges_out_nodes[node]) 
+        {
             weighted_sub_graph[edge->from()][edge->to()] = 0;
-            if (!nodes.count(edge->to())) {
+            if (!nodes.count(edge->to())) 
+            {
                 continue;
             }
-            if (backbone.count(node) && backbone.count(edge->to())) {             
+            if (backbone.count(node) && backbone.count(edge->to())) 
+            {             
                 continue;
             }
             current_weight += edge_weight[edge];
-            if (backbone.count(node) && !backbone.count(edge->to())) {
+            if (backbone.count(node) && !backbone.count(edge->to())) 
+            {
                 out_joins.insert(edge);
             }
 
-            if (!backbone.count(node) && backbone.count(edge->to())) {
+            if (!backbone.count(node) && backbone.count(edge->to())) 
+            {
                 in_joins.insert(edge);
                 continue;
             }
             weighted_sub_graph[edge->from()][edge->to()] = edge_weight[edge];
         }
-       
 
-        if (current_weight > max_weight) {
+        if (current_weight > max_weight) 
+        {
             max_weight = current_weight;
         }
     }
     //set weight for source edges
-    for (auto const &edge : out_joins) {
+    for (auto const &edge : out_joins) 
+    {
         weighted_sub_graph[source][edge->from()] = max_weight + 1;
-
     }
     //set weight for sink edges
-    for (auto const &edge : in_joins) {
+    for (auto const &edge : in_joins) 
+    {
         weighted_sub_graph[edge->from()][sink] = edge_weight[edge];
     }
 
@@ -10969,16 +11003,20 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
     vector<pair<id_t,id_t>> cut = min_cut(weighted_sub_graph, nodes, source,
                                                     sink, edges_out_nodes, in_joins);
     //remove min cut edges
-    for(auto const &edge : cut) {
+    for(auto const &edge : cut) 
+    {
         id_t to = edge.second;
-        if (to == sink) {
-            for (auto const &in_join : in_joins) {
-                if (in_join->from() == edge.first) {
+        if (to == sink) 
+        {
+            for (auto const &in_join : in_joins) 
+            {
+                if (in_join->from() == edge.first) 
+                {
                     to = in_join->to();
                 }
             }
         }
-        cerr << " removing min-cut edge " <<  edge.first << "->" << to << endl;  
+//        cerr << " removing min-cut edge " <<  edge.first << "->" << to << endl;  
         remove_edge(edges_out_nodes, edge.first, to, false);
         remove_edge(edges_in_nodes, to, edge.first, true);
     }
@@ -10986,67 +11024,100 @@ void VG::find_in_out_web(list<NodeTraversal>& sorted_nodes,
     set<id_t> visited;
     
     visited.insert(backbone.begin(), backbone.end());
-    for (auto const &current_id: ref_path) {
+
+    for (auto const &current_id: ref_path) 
+    {
         list<NodeTraversal> sort_out;
         NodeTraversal node = NodeTraversal(node_by_id[current_id], false);
         //out growth
         process_in_out_growth(edges_out_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sort_out, false, unsorted_nodes, 
-                in_out);
+                in_out, count);
         
-        if (sort_out.size() != 0) {
-            cerr << "out growth " << current_id << ": ";
-            for (auto const &n : sort_out) {
-                cerr << n.node->id() << " ";
-            }
-            cerr << endl;
+        if (sort_out.size() != 0) 
+        {
+//            cerr << "out growth " << current_id << ": ";
+//            for (auto const &n : sort_out) 
+//            {
+//                cerr << n.node->id() << " ";
+//            }
+//            cerr << endl;
             sorted_nodes.insert(sorted_nodes.end(), sort_out.begin(), sort_out.end());
         }
         //add backbone node to the result
-        if (unsorted_nodes.count(current_id) || current_id == start) {
+        if (unsorted_nodes.count(current_id) || current_id == start) 
+        {
             sorted_nodes.push_back(node);
-            if (current_id != start) {
+            if (current_id != start) 
+            {
                 unsorted_nodes.erase(current_id);
             }
         }
-//        process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
-//                    weighted_graph, visited, sorted_nodes, true, unsorted_nodes);
     }
+//    cerr << "backbone backward from " << start << ": ";
+//    for (auto const &id : ref_path) 
+//    {
+//        cerr << id << " ";
+//    }
+//    cerr << endl;
+//    
+//    cerr << "after backward from " << start << ": ";
+//    for (auto const &id : sorted_nodes)
+//    {
+//        cerr << id.node->id() << " ";
+//    }
+//    cerr << endl;
+    
     
     list<NodeTraversal> new_sorted;
     sorted_nodes.reverse();
-    for (auto const &node : sorted_nodes) {
+    for (auto const &node : sorted_nodes) 
+    {
         id_t current_id = node.node->id();     
         list<NodeTraversal> sort_in;
         //in growth
-        if (in_out) {
-            if (current_id != start) {
-                new_sorted.push_back(node);
-            }
-        }
         process_in_out_growth(edges_in_nodes, current_id, in_out_growth,
                     weighted_graph, visited, sort_in, true, unsorted_nodes, 
-                    in_out);
-        if (sort_in.size() != 0) {
-            cerr << "in growth "<< current_id << ": ";
-            for (auto const &n : sort_in) {
-                cerr << n.node->id() << " ";
-            }
-            cerr << endl;
+                    in_out, count);
+        if (sort_in.size() != 0) 
+        {
+//            cerr << "in growth "<< current_id << ": ";
+//            for (auto const &n : sort_in) 
+//            {
+//                cerr << n.node->id() << " ";
+//            }
+//            cerr << endl;
             new_sorted.insert(new_sorted.end(), sort_in.begin(), sort_in.end());
         }
-        if (!in_out) {
-            if (current_id != start) {
-                new_sorted.push_back(node);
-//                unsorted_nodes.erase(current_id);
-//                cerr << "erasing " << current_id << endl;
-            }
+        if (current_id != start) 
+        {
+            new_sorted.push_back(node);
+            unsorted_nodes.erase(current_id);
         }
-       
     }
-    new_sorted.reverse();
+    if (!in_out) 
+    {
+        new_sorted.reverse();
+    }
+    
+//    cerr << "backbone forward from " << start << ": ";
+//    for (auto const &id : sorted_nodes) 
+//    {
+//        cerr << id.node->id() << " ";
+//    }
+//    cerr << endl;
+//    
     sorted_nodes = new_sorted;
-  
+//    
+//    cerr << "growth sorted from " << start << ": ";
+//    for (auto const &id : sorted_nodes) 
+//    {
+//        cerr << id.node->id() << " ";
+//    }
+// 
+//    cerr << endl;
+//    cerr << "leaving recursion: " << count << endl;
+ 
 }
 /*
         Determines the presence of a in- out- growth, finds its backbone and calls min cut algorithm.
@@ -11058,20 +11129,23 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
         list<NodeTraversal>& sorted_nodes,
         bool reverse,
         set<id_t>& unsorted_nodes,
-        bool in_out) {
+        bool in_out, int count) 
+{
 
     if (!nodes_to_edges.count(current_id) || nodes_to_edges[current_id].size() == 0)
         return;
     
-    set<id_t> backbone = in_out_growth.backbone;
-    set<id_t> nodes = in_out_growth.nodes;
+    set<id_t>& backbone = in_out_growth.backbone;
+    set<id_t>& nodes = in_out_growth.nodes;
     set<id_t> new_backbone;
     list<id_t> new_ref_path;
     id_t start_node = current_id;
     
-    while (true) {
+    while (true) 
+    {
         if (new_backbone.count(start_node) || (start_node != current_id && 
-                visited.count(start_node))) {
+                visited.count(start_node))) 
+        {
             break;
         }
         new_backbone.insert(start_node);
@@ -11079,11 +11153,14 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
         int weight = 0;
         Edge* next_edge;
         //take edges with maximum weight to the new reference path
-        for (auto const &out_edge : nodes_to_edges[start_node]) {
-            if (weighted_graph.edge_weight[out_edge] > weight) {
+        for (auto const &out_edge : nodes_to_edges[start_node]) 
+        {
+            if (weighted_graph.edge_weight[out_edge] > weight) 
+            {
                 id_t tmp = reverse ? out_edge->from() : out_edge->to();
                 if (!nodes.count(tmp) || backbone.count(tmp) ||
-                        new_backbone.count(tmp) || visited.count(tmp)) {
+                        new_backbone.count(tmp) || visited.count(tmp)) 
+                {
                     continue;
                 }
                 start_node = tmp;
@@ -11096,30 +11173,34 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
 
     set<id_t> web;
     mark_dfs(nodes_to_edges, current_id, web, visited, reverse, nodes, backbone);
-    if (web.size() == 1 && web.count(current_id)) {
+    if (web.size() == 1 && web.count(current_id)) 
+    {
         return;
     }
-    if (in_out) {
-        
-    } else {
+    if (!reverse)
+    {
         new_ref_path.reverse();
     }
     InOutGrowth growth = InOutGrowth(web, new_backbone, new_ref_path);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes, 
-            current_id, in_out ^ reverse);
-    
+            current_id, reverse , count+1);
+   
 }
 
-void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool reverse) {
-    if (nodes_to_edges.count(node)) {
+void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool reverse)
+{
+    if (nodes_to_edges.count(node))
+    {
         auto& edges = nodes_to_edges[node];
         auto it = begin(edges);
-        while (it != end(edges)) {
+        while (it != end(edges)) 
+        {
             id_t next = reverse ? (*it)->from() : (*it)->to();
-
-            if (next == to) {
+            if (next == to) 
+            {
                 edges.erase(it);
-            } else {
+            } else 
+            {
                 ++it;
             }
         }
@@ -11132,18 +11213,23 @@ void VG::remove_edge(EdgeMapping& nodes_to_edges, id_t node, id_t to, bool rever
 void VG::mark_dfs(EdgeMapping& edges_to_nodes, id_t s,
             set<id_t>& new_nodes, set<id_t>& visited, bool reverse,
         set<id_t>& nodes,
-        set<id_t>& backbone) {
+        set<id_t>& backbone) 
+{
     visited.insert(s);
     new_nodes.insert(s);
     std::stack<id_t> q({ s });
-    while(!q.empty()) {
+    while(!q.empty()) 
+    {
         s = q.top();
         q.pop();
-        if (edges_to_nodes.count(s)) {
-            for (auto const &edge: edges_to_nodes[s]) {
+        if (edges_to_nodes.count(s)) 
+        {
+            for (auto const &edge: edges_to_nodes[s]) 
+            {
                 id_t next_node = reverse ? edge->from() : edge->to();
                 if (!visited.count(next_node) && nodes.count(next_node)
-                        && !backbone.count(next_node)) {
+                        && !backbone.count(next_node)) 
+                {
                     visited.insert(next_node);
                     new_nodes.insert(next_node);
                     q.push(next_node);
@@ -11157,7 +11243,8 @@ void VG::mark_dfs(EdgeMapping& edges_to_nodes, id_t s,
 /* Returns true if there is a path from source 's' to sink 't' in
    residual graph. Also fills parent[] to store the path */
 bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
-            id_t t, map<id_t, id_t>& parent) {
+            id_t t, map<id_t, id_t>& parent) 
+{
     // Create a visited array and mark all vertices as not visited
     set<id_t> visited;
 
@@ -11168,19 +11255,24 @@ bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
     parent[s] = -1;
 
     // Standard BFS Loop
-    while (!q.empty()) {
+    while (!q.empty())
+    {
         id_t u = q.front();
         q.pop();
-        for (auto const &weight : edge_weight[u]) {
-            if (weight.second <= 0) {
+        for (auto const &weight : edge_weight[u])
+        {
+            if (weight.second <= 0)
+            {
                 continue;
             }
             id_t v = weight.first;
-            if (!visited.count(v)) {
+            if (!visited.count(v)) 
+            {
                 q.push(v);
                 parent[v] = u;
                 visited.insert(v);
-                  if (v == t) {
+                  if (v == t) 
+                {
                     return true;
                 }
             }
@@ -11193,16 +11285,19 @@ bool VG::bfs(set<id_t>& nodes, map<id_t, map<id_t, int>>& edge_weight, id_t s,
 }
 
 
-void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, int>>& edge_weight) {
-
+void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, 
+        map<id_t, map<id_t, int>>& edge_weight) 
+{
     visited.insert(s);
     std::stack<id_t> q({ s });
     while (!q.empty()) {
         s = q.top();
         q.pop();
-        for (auto const &weight : edge_weight[s]) {
+        for (auto const &weight : edge_weight[s]) 
+        {
             id_t to = weight.first;
-            if (weight.second && !visited.count(to)) {
+            if (weight.second && !visited.count(to)) 
+            {
                 visited.insert(to);
                 q.push(to);
             }
@@ -11210,40 +11305,45 @@ void VG::dfs(set<id_t>& nodes, id_t s, set<id_t>& visited, map<id_t, map<id_t, i
     }
 }
 
-
 // Returns the minimum s-t cut
-
 vector<pair<id_t,id_t>> VG::min_cut(map<id_t, map<id_t, int>>& graph_weight,
                 set<id_t>& nodes,
                 id_t s, id_t t,
                 EdgeMapping& edges_out_nodes,
-                set<Edge*>& in_joins) {
+                set<Edge*>& in_joins) 
+{
     id_t u, v;
     nodes.insert(s);
     nodes.insert(t);
     map<id_t, id_t> parent_map;
 
     // Augment the flow while there is path from source to sink
-    while (bfs(nodes, graph_weight, s, t, parent_map)) {
+    while (bfs(nodes, graph_weight, s, t, parent_map)) 
+    {
         // Find minimum residual capacity of the edges along the
         // path filled by BFS. Or we can say find the maximum flow
         // through the path found.
         int path_flow = numeric_limits<int>::max();
-        for (v = t; v != s; v = parent_map[v]) {
+        for (v = t; v != s; v = parent_map[v]) 
+        {
             u = parent_map[v];
-            if (!graph_weight.count(u) || !graph_weight[u].count(v)) {
+            if (!graph_weight.count(u) || !graph_weight[u].count(v)) 
+            {
                 graph_weight[u][v] = 0;
             }
             path_flow = min(path_flow, graph_weight[u][v]);
         }
         // update residual capacities of the edges and reverse edges
         // along the path
-        for (v = t; v != s; v = parent_map[v]) {
+        for (v = t; v != s; v = parent_map[v]) 
+        {
             u = parent_map[v];
-             if (!graph_weight.count(u) || !graph_weight[u].count(v)) {
+            if (!graph_weight.count(u) || !graph_weight[u].count(v)) 
+            {
                 graph_weight[u][v] = 0;
             }
-             if (!graph_weight.count(v) || !graph_weight[v].count(u)) {
+             if (!graph_weight.count(v) || !graph_weight[v].count(u)) 
+            {
                 graph_weight[v][u] = 0;
             }
             graph_weight[u][v] -= path_flow;
@@ -11260,26 +11360,27 @@ vector<pair<id_t,id_t>> VG::min_cut(map<id_t, map<id_t, int>>& graph_weight,
     nodes.erase(s);
     nodes.erase(t);
 
-    for(auto const node_id : nodes) {
-        for (auto const &edge : edges_out_nodes[node_id]) {
+    for(auto const node_id : nodes) 
+    {
+        for (auto const &edge : edges_out_nodes[node_id])
+        {
             id_t to = edge->to();
-            if (!nodes.count(to)) {
+            if (!nodes.count(to)) 
+            {
                 continue;
             }
 
-            if (in_joins.count(edge)) {
+            if (in_joins.count(edge)) 
+            {
                  to = t;
             }
-            if (visited_set.count(node_id) && !visited_set.count(to)) {
-//                cerr << node_id << " - " << to << endl;
-                //remove min cut edges
+            if (visited_set.count(node_id) && !visited_set.count(to))
+            {
                 min_cut.push_back(pair<id_t, id_t>(node_id, to));
             }
         }
     }
-
     return min_cut;
 }
-
 
 } // end namespace
