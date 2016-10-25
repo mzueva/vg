@@ -10436,7 +10436,7 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes,
     }
 
     set<id_t> unsorted_nodes(nodes.begin(), nodes.end());
-    InOutGrowth growth = InOutGrowth(nodes, backbone, reference);
+    InOutGrowth growth (nodes, backbone, reference);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes, -1, 
             false, 0);
    
@@ -10474,7 +10474,7 @@ void VG::max_flow_sort(list<NodeTraversal>& sorted_nodes,
             reference_new.push_back(node.node->id());
         }
       
-        InOutGrowth growth_new = InOutGrowth(nodes_new, backbone_new, reference_new);
+        InOutGrowth growth_new (nodes_new, backbone_new, reference_new);
         WeightedGraph weighted_graph_new = get_weighted_graph(ref_name);
         find_in_out_web(sorted_nodes_new, growth_new, weighted_graph_new, 
                 unsorted_nodes_new, -1, false, 0);
@@ -11181,7 +11181,7 @@ void VG::process_in_out_growth(EdgeMapping& nodes_to_edges, id_t current_id,
     {
         new_ref_path.reverse();
     }
-    InOutGrowth growth = InOutGrowth(web, new_backbone, new_ref_path);
+    InOutGrowth growth (web, new_backbone, new_ref_path);
     find_in_out_web(sorted_nodes, growth, weighted_graph, unsorted_nodes, 
             current_id, reverse , count+1);
    
