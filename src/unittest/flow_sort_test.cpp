@@ -281,8 +281,6 @@ P	21	path12	3	+	1M)";
                res << " ";
             res << vg.graph.mutable_node(i)->id();
         }
-        // should be from manual calculation
-        //1 5 6 12 7 9 11 8 10 4 19 13 16 18 14 17 15 2 22 28 23 25 27 24 26 20 35 29 32 34 30 33 31 21 3 
         REQUIRE(res.str().compare("1 5 6 12 7 9 11 8 10 4 19 13 16 18 14 17 15 2 22 28 23 25 27 24 26 20 35 29 32 34 30 33 31 21 3") == 0);
     }
 }
